@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import cdist
-
-
+from scipy.ndimage import center_of_mass
+import igraph as ig
 
 
 def build_assign_mat(vertices, cube_size=3):
@@ -50,10 +50,10 @@ def load_graph(fname_pickle):
 
 	vertex2vox = {}
 	vox2vertex = {}
-	for vertex in g.vs:
+	for i, vertex in enumerate(g.vs):
 		vox = vertex['name']
-		vertex2vox[vertex] = vox
-		vox2vertex[vox] = vertex
+		vertex2vox[i] = vox
+		vox2vertex[vox] = i
 
 	return g, vertex2vox, vox2vertex
 
@@ -65,6 +65,31 @@ def save_graph(g, fname_pickle):
 		fname_pickle += '.pkl'
 	print('Saving graph to {}'.format(fname_pickle))
 	g.write_pickle(fname=fname_pickle)
+
+
+def mask2vertex(mask, vox2vertex):
+	# return the graph vertex of all voxels in a mask
+	_vox = np.array(np.where(mask))
+	_xyz = [tuple(_vox[:,i]) for i in range(_vox.shape[1])]
+	_vertex = [vox2vertex[xyz] for xyz in _xyz]
+	return _vertex
+
+
+def mask_COM(mask):
+	# compute Center-of-Mass of mask
+	# return voxel in mask closest (euclidean) to COM
+	com = np.array(center_of_mass(mask))[None, :]
+	vox = np.array(np.where(mask)).T
+	closest_idx = np.argmin(cdist(com, vox)[0])
+	return tuple(vox[closest_idx])
+
+
+
+
+
+
+
+
 
 
 
