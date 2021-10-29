@@ -43,7 +43,28 @@ def build_assign_mat(vertices, cube_size=3):
 # 	print(d, '{:.2f} %'.format(100*prop[-1]))
 
 
+def load_graph(fname_pickle):
+	# load a pickle igraph
+	# reconstruct vox2vertex and vertex2vox dictionaries
+	g = ig.Graph.Read_Pickle(fname_pickle)
 
+	vertex2vox = {}
+	vox2vertex = {}
+	for vertex in g.vs:
+		vox = vertex['name']
+		vertex2vox[vertex] = vox
+		vox2vertex[vox] = vertex
+
+	return g, vertex2vox, vox2vertex
+
+
+def save_graph(g, fname_pickle):
+	# save graph as pickle
+	# this function does nothing except normalizing file extension
+	if fname_pickle[-4:] != '.pkl':
+		fname_pickle += '.pkl'
+	print('Saving graph to {}'.format(fname_pickle))
+	g.write_pickle(fname=fname_pickle)
 
 
 
