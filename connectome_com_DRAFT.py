@@ -5,8 +5,8 @@ from time import time
 
 import igraph as ig
 
-# from dipy.io.streamline import save_tck, save_trk
-# from dipy.io.stateful_tractogram import Origin, Space, StatefulTractogram
+from dipy.io.streamline import save_tck
+from dipy.io.stateful_tractogram import Origin, Space, StatefulTractogram
 
 from utils import mask2vertex, mask_COM, load_graph
 
@@ -25,163 +25,162 @@ mask = mask_img.get_fdata().astype(np.bool)
 
 
 
-# load roi mask and clip to WM mask
-roipath = '/data/pt_02015/human_test_data_deconvolution_08088.b3/tp0/mrtrix/rois/'
-from os import listdir
-from os.path import isfile, join
-roifiles = [f for f in listdir(roipath) if isfile(join(roipath, f))]
-rois_fname = [roipath + roifiles[i] for i in range(len(roifiles))]
+# load label mask (already intersected with wm mask)
+roipath = '/data/pt_02015/human_test_data_deconvolution_08088.b3/tp0/mrtrix/all_label.nii.gz'
+label_map = nib.load(roipath).get_fdata().astype(np.int)
 
 
-rois_mask_tmp = [nib.load(fname).get_fdata().astype(np.bool) for fname in rois_fname]
-rois_mask = [np.logical_and(roi_mask, mask) for roi_mask in rois_mask_tmp]
 
+# this is for list of mask
+# rois_vertex = [mask2vertex(roi_mask, vox2vertex) for roi_mask in rois_mask]
+# this is for label map
+rois_vertex = [mask2vertex(label_map==i, vox2vertex) for i in range(1, label_map.max()+1)]
 
-rois_vertex = [mask2vertex(roi_mask, vox2vertex) for roi_mask in rois_mask]
-
-# del rois_mask
-# del rois_mask_tmp
 
 
 # compute center-of-mass -ish voxel for each roi
 rois_center_vertex = []
-for roi_mask in rois_mask:
-	rois_center_vertex.append(vox2vertex[mask_COM(roi_mask)])
-
-
-
-all_dest = [vert for roi_vertex in rois_vertex for vert in roi_vertex]
-all_count = [len(roi_vertex) for roi_vertex in rois_vertex]
-
-
-
-# import pickle
-
-# a = {'hello': 'world'}
-
-# with open('filename.pickle', 'wb') as handle:
-#     pickle.dump(a, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-# with open('filename.pickle', 'rb') as handle:
-#     b = pickle.load(handle)
+# for roi_mask in rois_mask:
+#   rois_center_vertex.append(vox2vertex[mask_COM(roi_mask)])
+for i in range(1, label_map.max()+1):
+    roi_mask = (label_map==i)
+    rois_center_vertex.append(vox2vertex[mask_COM(roi_mask)])
 
 
 
 
+start_time = time()
 
-# connectome = np.zeros((len(rois_fname), len(rois_fname)))
-# connectome_geom = np.zeros((len(rois_fname), len(rois_fname)))
+paths = [] # paths[i_source][i_dest]
+paths_length = []
 
+for i_source in range(len(rois_center_vertex)):
+    source = rois_center_vertex[i_source]
 
+    path = g.get_shortest_paths(source, 
+                                    to=rois_center_vertex, 
+                                    weights='neg_log', 
+                                    mode='out', 
+                                    output='vpath')
+    paths.append(path)
+    paths_length.append([len(s) for s in path])
 
-# start_time = time()
-
-# # shortest_paths = []
-# shortest_lenghts = []
-# shortest_geom = []
-
-
-# for i_source in range(len(rois_fname)):
-# 	print('source is {}'.format(rois_fname[i_source].split('/')[-1][:-7]))
-# 	source = rois_center_vertex[i_source]
-
-
-# 	shortest_path = g.get_shortest_paths(source, 
-# 	                                    to=all_dest, 
-# 	                                    weights='neg_log', 
-# 	                                    mode='out', 
-# 	                                    output='vpath')
-# 	# shortest_paths.append(shortest_path)
-# 	# [len(s) for s in shortest_path]
-
-
-# 	shortest_lenght = g.shortest_paths(source=source, 
-# 	                                    target=all_dest, 
-# 	                                    weights='neg_log', 
-# 	                                    mode='out')
-
-# 	shortest_lenghts.append(shortest_lenght)
-
-
-# 	shortest_geom.append(np.exp(-np.array(shortest_lenght[0]) / np.array([len(s) for s in shortest_path])))
-
-
-# end_time = time()
-# print('Elapsed time (all path) = {:.2f} s'.format(end_time - start_time))
+end_time = time()
+print('Shortest path (COM2COM) = {:.2f} s'.format(end_time - start_time))
 
 
 
 
-# # shortest_lenghts is sum(-log(prob))
-# # we want geometric_mean(prob) = -shortest_lenghts / len
+start_time = time()
+
+# weights[i_source][i_dest]
+weights = g.shortest_paths(source=rois_center_vertex, 
+                           target=rois_center_vertex, 
+                           weights='neg_log', 
+                           mode='out')
+
+end_time = time()
+print('Shortest path weight (COM2COM) = {:.2f} s'.format(end_time - start_time))
 
 
-# all_count_cum = np.concatenate(([0], np.cumsum(all_count)))
+matrix_weight = np.array(weights)
+matrix_prob = np.exp(-matrix_weight)
+matrix_geom = np.exp(-matrix_weight / np.array(paths_length))
 
 
-# start_time = time()
-
-# for ii in range(len(rois_fname)):
-# 	for jj in range(len(rois_fname)):
-# 		# bundle-mean of streamline-cummulative-probability
-# 		connectome[ii, jj] = np.mean(np.exp(-np.array(shortest_lenghts[ii][0][all_count_cum[jj]:all_count_cum[jj+1]])))
-		
-# 		# bundle-mean of streamline-geometric-mean-probability
-# 		connectome_geom[ii, jj] = np.mean(shortest_geom[ii][all_count_cum[jj]:all_count_cum[jj+1]])
-
-# end_time = time()
-# print('Elapsed time (all path) = {:.2f} s'.format(end_time - start_time))
+np.save(mainpath+'graph_mat_w.npy', matrix_weight)
+np.save(mainpath+'graph_mat_prob.npy', matrix_prob)
+np.save(mainpath+'graph_mat_geom.npy', matrix_geom)
 
 
-# import pylab as pl
 
-# pl.figure()
-# pl.subplot(2,2,1)
-# pl.imshow(connectome)
-# pl.title('bundle-mean of streamline-cummulative-probability')
-# pl.subplot(2,2,2)
-# pl.imshow(np.log(connectome))
-# pl.title('LOG-OF bundle-mean of streamline-cummulative-probability')
-# pl.subplot(2,2,3)
-# pl.imshow(connectome_geom)
-# pl.title('bundle-mean of streamline-geometric-mean-probability')
+
+
+
+
+start_time = time()
+
+streamlines = []
+for i_source in range(len(rois_center_vertex)):
+    for i_dest in range(len(rois_center_vertex)):
+        streamlines.append(np.array([vertex2vox[v] for v in paths[i_source][i_dest]]))
+
+end_time = time()
+print('Elapsed time (convert path to streamlines) = {:.2f} s'.format(end_time - start_time))
+
+
+
+tgm = StatefulTractogram(
+                    streamlines=streamlines,
+                    reference=mask_img,
+                    space=Space.VOX,
+                    origin=Origin.NIFTI)
+
+
+
+fname = mainpath + 'shortest_COM2COM.tck'
+save_tck(tgm, fname, bbox_valid_check=False)
+
+
+
+
+
+
+
+from scipy.interpolate import splprep, splev
+import pylab as pl
+
+
+start_time = time()
+
+interp_streamlines = []
+for i_stl in range(len(streamlines)):
+    stl = streamlines[i_stl]
+    if len(stl) > 3:
+        tck, u = splprep(x=[stl[:,i] for i in range(stl.shape[1])],
+                         k=3,
+                         s=0)
+
+        new_points = np.array(splev(np.linspace(0, 1, 100), tck)).T 
+    else:
+        new_points = stl.copy()
+
+    interp_streamlines.append(new_points)
+
+end_time = time()
+print('Interp streamlines = {:.2f} s'.format(end_time - start_time))
+
+
+
+tgm = StatefulTractogram(
+                    streamlines=interp_streamlines,
+                    reference=mask_img,
+                    space=Space.VOX,
+                    origin=Origin.NIFTI)
+
+
+
+fname = mainpath + 'shortest_COM2COM_smooth_s_0p0.tck'
+save_tck(tgm, fname, bbox_valid_check=False)
+
+
+
+# fig = pl.figure()
+# fig.add_subplot(projection='3d')
+# pl.plot(stl[:,0], stl[:,1], stl[:,2], label='Streamline')
+# pl.plot(new_points[:,0], new_points[:,1], new_points[:,2], label='Interpolated')
+# pl.legend()
 # pl.show()
 
 
 
 
-# connectome_geom_alpha_tmp = np.zeros_like(connectome_geom)
-# connectome_geom_alpha = np.zeros_like(connectome_geom)
-
-# connectome_alpha_tmp = np.zeros_like(connectome)
-# connectome_alpha = np.zeros_like(connectome)
-
-# order = np.argsort(rois_fname)
 
 
-# for i in range(connectome_geom.shape[0]):
-# 	idx = order[i]
-# 	connectome_geom_alpha_tmp[i,:] = connectome_geom[idx,:]
-# 	connectome_alpha_tmp[i,:] = connectome[idx,:]
 
 
-# for j in range(connectome_geom.shape[1]):
-# 	idx = order[j]
-# 	connectome_geom_alpha[:, j] = connectome_geom_alpha_tmp[:, idx]
-# 	connectome_alpha[:, j] = connectome_alpha_tmp[:, idx]
 
 
-# pl.figure()
-# pl.subplot(2,2,1)
-# pl.imshow(connectome_alpha)
-# pl.title('bundle-mean of streamline-cummulative-probability')
-# pl.subplot(2,2,2)
-# pl.imshow(np.log(connectome_alpha))
-# pl.title('LOG-OF bundle-mean of streamline-cummulative-probability')
-# pl.subplot(2,2,3)
-# pl.imshow(connectome_geom_alpha)
-# pl.title('bundle-mean of streamline-geometric-mean-probability')
-# pl.show()
 
 
 
@@ -192,46 +191,48 @@ all_count = [len(roi_vertex) for roi_vertex in rois_vertex]
 
 # # start_time = time()
 
-# # all_count_cum = np.concatenate(([0], np.cumsum(all_count)))
-
-# # connectome_mean_log = np.zeros((len(rois_fname), len(rois_fname)))
-# # connectome_mean_prob = np.zeros((len(rois_fname), len(rois_fname)))
-
-# # connectome_median_log = np.zeros((len(rois_fname), len(rois_fname)))
-# # connectome_median_prob = np.zeros((len(rois_fname), len(rois_fname)))
-
-
-# # for ii in range(len(rois_fname)):
-# # 	for jj in range(len(rois_fname)):
-# # 		connectome_mean_log[ii, jj] = np.mean(shortest_lenghts[ii][0][all_count_cum[jj]:all_count_cum[jj+1]])
-# # 		connectome_median_log[ii, jj] = np.median(shortest_lenghts[ii][0][all_count_cum[jj]:all_count_cum[jj+1]])
-# # 		connectome_mean_prob[ii, jj] = np.mean(np.exp(-np.array(shortest_lenghts[ii][0][all_count_cum[jj]:all_count_cum[jj+1]])))
-# # 		connectome_median_prob[ii, jj] = np.median(np.exp(-np.array(shortest_lenghts[ii][0][all_count_cum[jj]:all_count_cum[jj+1]])))
-
-
+# # streamlines = []
+# # for i_dest in range(len(all_dest)):
+# #     streamlines.append(np.array([vertex2vox[v] for v in shortest_paths[0][i_dest]]))
 
 # # end_time = time()
-# # print('Elapsed time (all path) = {:.2f} s'.format(end_time - start_time))
+# # print('Elapsed time (convert path to streamlines) = {:.2f} s'.format(end_time - start_time))
+
+
+
+# # tgm = StatefulTractogram(
+# #                     streamlines=streamlines,
+# #                     reference=prob_img,
+# #                     space=Space.VOX,
+# #                     origin=Origin.NIFTI)
+
+
+
+# # fname = mainpath + 'one_source_to_all.tck'
+# # save_tck(tgm, fname, bbox_valid_check=False)
 
 
 
 
-# # pl.figure()
-# # pl.subplot(2,2,1)
-# # pl.imshow(connectome_mean_log)
-# # pl.title('connectome_mean_log')
-# # pl.subplot(2,2,2)
-# # pl.imshow(connectome_median_log)
-# # pl.title('connectome_median_log')
-# # pl.subplot(2,2,3)
-# # # pl.imshow(connectome_mean_prob)
-# # pl.imshow(np.log(connectome_mean_prob))
-# # pl.title('connectome_mean_prob')
-# # pl.subplot(2,2,4)
-# # # pl.imshow(connectome_median_prob)
-# # pl.imshow(np.log(connectome_median_prob))
-# # pl.title('connectome_median_prob')
-# # pl.show()
+
+
+
+# all_dest = [vert for roi_vertex in rois_vertex for vert in roi_vertex]
+# all_count = [len(roi_vertex) for roi_vertex in rois_vertex]
+
+
+
+
+
+
+
+######## save shortest streamline (all)
+######## save smoothed all streamline
+######## need to experiment with smoothing param
+######## need? to enforce that smoothed still have true pts 
+
+
+
 
 
 
@@ -246,94 +247,9 @@ all_count = [len(roi_vertex) for roi_vertex in rois_vertex]
 
 
 
-
-
-
-
-# # start_time = time()
-
-# # streamlines = []
-# # for i_dest in range(len(all_dest)):
-# # 	streamlines.append(np.array([vertex2vox[v] for v in shortest_paths[0][i_dest]]))
-
-# # end_time = time()
-# # print('Elapsed time (convert path to streamlines) = {:.2f} s'.format(end_time - start_time))
-
-
-
-# # tgm = StatefulTractogram(
-# #                     streamlines=streamlines,
-# #                     reference=prob_img,
-# #                     space=Space.VOX,
-# # 					origin=Origin.NIFTI)
-
-
-
-# # fname = mainpath + 'one_source_to_all.tck'
-# # save_tck(tgm, fname, bbox_valid_check=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# start_time = time()
-
-# shortest_paths_com = []
-# # shortest_lenghts = []
-
-
-# for i_source in range(len(rois_fname)):
-# 	print('source is {}'.format(rois_fname[i_source].split('/')[-1][:-7]))
-# 	source = rois_center_vertex[i_source]
-# 	dest = rois_center_vertex
-
-
-# 	shortest_path = g.get_shortest_paths(source, 
-# 	                                    to=dest, 
-# 	                                    weights='neg_log', 
-# 	                                    mode='out', 
-# 	                                    output='vpath')
-# 	shortest_paths_com.append(shortest_path)
-
-
-
-# 	# shortest_lenght = g.shortest_paths(source=source, 
-# 	#                                     target=dest, 
-# 	#                                     weights='neg_log', 
-# 	#                                     mode='out')
-
-# 	# shortest_lenghts.append(shortest_lenght)
-
-# end_time = time()
-# print('Elapsed time (all path) = {:.2f} s'.format(end_time - start_time))
-
-
-
-
-
-
-
 # [g.es[g.get_eid(shortest_paths_com[0][3][i], shortest_paths_com[0][3][i+1])]['neg_log'] for i in range(len(shortest_paths_com[0][3])-1)]
 
-
-
-
-
 # [g.es[g.get_eid(qq_path[i], qq_path[i+1])]['neg_log'] for i in range(len(qq_path)-1)]
-
-
-
-
-
 
 
 
