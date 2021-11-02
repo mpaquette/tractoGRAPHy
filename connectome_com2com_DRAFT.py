@@ -5,9 +5,6 @@ from time import time
 
 import igraph as ig
 
-from dipy.io.streamline import save_tck
-from dipy.io.stateful_tractogram import Origin, Space, StatefulTractogram
-
 from utils import mask2vertex, 
                   mask_COM, 
                   load_graph, 
@@ -72,10 +69,10 @@ matrix_prob = np.exp(-matrix_weight)
 matrix_geom = np.exp(-matrix_weight / matrix_length)
 
 
-np.save(mainpath+'graph_mat_w.npy', matrix_weight)
-np.save(mainpath+'graph_mat_l.npy', matrix_length)
-np.save(mainpath+'graph_mat_prob.npy', matrix_prob)
-np.save(mainpath+'graph_mat_geom.npy', matrix_geom)
+np.save(mainpath+'graph_mat_com2com_w.npy', matrix_weight)
+np.save(mainpath+'graph_mat_com2com_l.npy', matrix_length)
+np.save(mainpath+'graph_mat_com2com_prob.npy', matrix_prob)
+np.save(mainpath+'graph_mat_com2com_geom.npy', matrix_geom)
 
 
 
