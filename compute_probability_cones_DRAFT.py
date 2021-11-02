@@ -47,8 +47,8 @@ assign_mat, vec = build_assign_mat_cone(sphere.vertices, ang_th, 3)
 
 
 
-
-prob_mat = np.zeros(sh.shape[:3]+(assign_mat.shape[1], assign_mat.shape[2]))
+# float32 for memory
+prob_mat = np.zeros(sh.shape[:3]+(assign_mat.shape[1], assign_mat.shape[2]), dtype=np.float32)
 
 start_time = time()
 for Z in range(sh.shape[2]):
@@ -69,20 +69,26 @@ end_time = time()
 print('Elapsed time = {:.2f} s'.format(end_time - start_time))
 
 
+# memory gain before normalization
+del sh 
+del sh_img
 
 
 
+# normalization per neighboor for memory
+for i_inc in range(assign_mat.shape[2]):
+	# make prob sum to 1
+	prob_mat[..., i_inc] = prob_mat[..., i_inc] / prob_mat[..., i_inc].sum(axis=3)[:, :, :, None]
 
-
-
-# make prob sum to 1
-prob_mat = prob_mat / prob_mat.sum(axis=3)[..., None]
 # clean outside mask
 # TODO check is inf or Nan checking is necc.
 prob_mat[np.logical_not(mask)] = 0
 
 
-out_fname = mainpath + 'probability_th_0p20.nii.gz'
+
+# ODF_TH = 0.2
+# ang_th = 60
+out_fname = mainpath + 'probability_cone_th_0p20_ang_60.nii.gz'
 nib.Nifti1Image(prob_mat, affine).to_filename(out_fname)
 
 
