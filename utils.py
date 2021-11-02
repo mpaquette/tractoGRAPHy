@@ -66,12 +66,14 @@ def build_assign_mat_cone(vertices, angle_thr, cube_size=3):
     dist_mat = cdist(dirs, vec_norm, metric='euclidean')
     closest = np.argmin(dist_mat, axis=1)
 
-
+    # build assign mat with cone
     assign_mat_nocone = np.zeros((dirs.shape[0], vec.shape[0]), dtype=np.int)
     assign_mat_nocone[(range(dirs.shape[0]), closest)] = 1
 
     assign_mat = np.zeros((dirs.shape[0], vec.shape[0], vec.shape[0]), dtype=np.int)
 
+    # with each neighboor vector as incoming direction, 
+    # clamp to 0 (unassign) all points outside of cone 
     eucl_dist_cone = np.sqrt(2-2*np.cos((np.pi/180)*angle_thr))
     # build cones
     for i_inc in range(vec.shape[0]):
@@ -81,7 +83,6 @@ def build_assign_mat_cone(vertices, angle_thr, cube_size=3):
         # ((4*np.pi*np.sin(((np.pi/180)*angle_thr)/2)**2) / (4*np.pi)) # expected volume chunk
         # np.sum(dist_mat_inc <= eucl_dist_cone) / vertices.shape[0] # point approx
         assign_mat[conemask, :, i_inc] = assign_mat_nocone[conemask]
-
 
     return assign_mat, vec
 
