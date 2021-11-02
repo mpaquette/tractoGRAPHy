@@ -8,7 +8,11 @@ import igraph as ig
 from dipy.io.streamline import save_tck
 from dipy.io.stateful_tractogram import Origin, Space, StatefulTractogram
 
-from utils import mask2vertex, mask_COM, load_graph
+from utils import mask2vertex, 
+                  mask_COM, 
+                  load_graph, 
+                  compute_shortest_paths_COM2COM, 
+                  save_COM2COM_path_as_streamlines
 
 
 
@@ -50,20 +54,9 @@ for i in range(1, label_map.max()+1):
 
 
 start_time = time()
-
-paths = [] # paths[i_source][i_dest]
-paths_length = []
-
-for i_source in range(len(rois_center_vertex)):
-    source = rois_center_vertex[i_source]
-
-    path = g.get_shortest_paths(source, 
-                                    to=rois_center_vertex, 
-                                    weights='neg_log', 
-                                    mode='out', 
-                                    output='vpath')
-    paths.append(path)
-    paths_length.append([len(s) for s in path])
+paths, paths_length, weights = compute_shortest_paths_COM2COM(g,
+                                                              rois_center_vertex,
+                                                              w='neg_log')
 
 end_time = time()
 print('Shortest path (COM2COM) = {:.2f} s'.format(end_time - start_time))
@@ -71,55 +64,30 @@ print('Shortest path (COM2COM) = {:.2f} s'.format(end_time - start_time))
 
 
 
-start_time = time()
 
-# weights[i_source][i_dest]
-weights = g.shortest_paths(source=rois_center_vertex, 
-                           target=rois_center_vertex, 
-                           weights='neg_log', 
-                           mode='out')
-
-end_time = time()
-print('Shortest path weight (COM2COM) = {:.2f} s'.format(end_time - start_time))
-
-
+## save connectome matrix
 matrix_weight = np.array(weights)
+matrix_length = np.array(paths_length)
 matrix_prob = np.exp(-matrix_weight)
-matrix_geom = np.exp(-matrix_weight / np.array(paths_length))
+matrix_geom = np.exp(-matrix_weight / matrix_length)
 
 
 np.save(mainpath+'graph_mat_w.npy', matrix_weight)
+np.save(mainpath+'graph_mat_l.npy', matrix_length)
 np.save(mainpath+'graph_mat_prob.npy', matrix_prob)
 np.save(mainpath+'graph_mat_geom.npy', matrix_geom)
 
 
 
 
-
-
-
 start_time = time()
-
-streamlines = []
-for i_source in range(len(rois_center_vertex)):
-    for i_dest in range(len(rois_center_vertex)):
-        streamlines.append(np.array([vertex2vox[v] for v in paths[i_source][i_dest]]))
-
+fname_stl = mainpath + 'shortest_COM2COM.tck'
+save_COM2COM_path_as_streamlines(paths, 
+                                 vertex2vox, 
+                                 ref_img=mask_img, 
+                                 fname=fname_stl)
 end_time = time()
-print('Elapsed time (convert path to streamlines) = {:.2f} s'.format(end_time - start_time))
-
-
-
-tgm = StatefulTractogram(
-                    streamlines=streamlines,
-                    reference=mask_img,
-                    space=Space.VOX,
-                    origin=Origin.NIFTI)
-
-
-
-fname = mainpath + 'shortest_COM2COM.tck'
-save_tck(tgm, fname, bbox_valid_check=False)
+print('Elapsed time (save path as streamlines) = {:.2f} s'.format(end_time - start_time))
 
 
 
@@ -127,41 +95,42 @@ save_tck(tgm, fname, bbox_valid_check=False)
 
 
 
-from scipy.interpolate import splprep, splev
-import pylab as pl
+
+# from scipy.interpolate import splprep, splev
+# import pylab as pl
 
 
-start_time = time()
+# start_time = time()
 
-interp_streamlines = []
-for i_stl in range(len(streamlines)):
-    stl = streamlines[i_stl]
-    if len(stl) > 3:
-        tck, u = splprep(x=[stl[:,i] for i in range(stl.shape[1])],
-                         k=3,
-                         s=0)
+# interp_streamlines = []
+# for i_stl in range(len(streamlines)):
+#     stl = streamlines[i_stl]
+#     if len(stl) > 3:
+#         tck, u = splprep(x=[stl[:,i] for i in range(stl.shape[1])],
+#                          k=3,
+#                          s=0)
 
-        new_points = np.array(splev(np.linspace(0, 1, 100), tck)).T 
-    else:
-        new_points = stl.copy()
+#         new_points = np.array(splev(np.linspace(0, 1, 100), tck)).T 
+#     else:
+#         new_points = stl.copy()
 
-    interp_streamlines.append(new_points)
+#     interp_streamlines.append(new_points)
 
-end_time = time()
-print('Interp streamlines = {:.2f} s'.format(end_time - start_time))
-
-
-
-tgm = StatefulTractogram(
-                    streamlines=interp_streamlines,
-                    reference=mask_img,
-                    space=Space.VOX,
-                    origin=Origin.NIFTI)
+# end_time = time()
+# print('Interp streamlines = {:.2f} s'.format(end_time - start_time))
 
 
 
-fname = mainpath + 'shortest_COM2COM_smooth_s_0p0.tck'
-save_tck(tgm, fname, bbox_valid_check=False)
+# tgm = StatefulTractogram(
+#                     streamlines=interp_streamlines,
+#                     reference=mask_img,
+#                     space=Space.VOX,
+#                     origin=Origin.NIFTI)
+
+
+
+# fname = mainpath + 'shortest_COM2COM_smooth_s_0p0.tck'
+# save_tck(tgm, fname, bbox_valid_check=False)
 
 
 
