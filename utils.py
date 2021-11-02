@@ -77,7 +77,7 @@ def build_assign_mat_cone(vertices, angle_thr, cube_size=3):
     eucl_dist_cone = np.sqrt(2-2*np.cos((np.pi/180)*angle_thr))
     # build cones
     for i_inc in range(vec.shape[0]):
-        cone_center = -vec_norm[i_inc]
+        cone_center = vec_norm[i_inc] # oups
         dist_mat_inc = cdist(dirs, cone_center[None,:], metric='euclidean')
         conemask = dist_mat_inc[:,0] <= eucl_dist_cone
         # ((4*np.pi*np.sin(((np.pi/180)*angle_thr)/2)**2) / (4*np.pi)) # expected volume chunk
@@ -124,6 +124,13 @@ def mask2vertex(mask, vox2vertex):
     _vertex = [vox2vertex[xyz] for xyz in _xyz]
     return _vertex
 
+def mask2vertex_cone(mask, vox2vertex):
+    # return the graph vertex of all voxels in a mask
+    _vox = np.array(np.where(mask))
+    _xyz = [tuple(_vox[:,i]) for i in range(_vox.shape[1])]
+    _vertex = [[vox2vertex[xyz+(i_inc,)] for i_inc in range(26)] for xyz in _xyz]
+    return _vertex
+
 
 def mask_COM(mask):
     # compute Center-of-Mass of mask
@@ -164,13 +171,17 @@ def compute_shortest_paths_COM2COM(g, COMs, w='neg_log'):
     return paths, paths_length, path_weights
 
 
+
+
 def save_COM2COM_path_as_streamlines(paths, vertex2vox, ref_img, fname):
 
     # loop into paths of vertex to create list of array of voxel
     streamlines = []
     for i_source in range(len(paths)):
         for i_dest in range(len(paths[i_source])):
-            streamlines.append(np.array([vertex2vox[v] for v in paths[i_source][i_dest]]))
+            p = paths[i_source][i_dest]
+            if len(p) > 1:
+                streamlines.append(np.array([vertex2vox[v] for v in p]))
 
 
     tgm = StatefulTractogram(
@@ -181,6 +192,26 @@ def save_COM2COM_path_as_streamlines(paths, vertex2vox, ref_img, fname):
 
     save_tck(tgm, fname, bbox_valid_check=False)
 
+
+def save_COM2COM_path_as_streamlines_cone(paths, vertex2vox, ref_img, fname):
+
+    # loop into paths of vertex to create list of array of voxel
+    streamlines = []
+    for i_source in range(len(paths)):
+        for i_dest in range(len(paths[i_source])):
+            p = paths[i_source][i_dest]
+            if len(p) > 1:
+                # ignore endpoints COM_i nodes
+                # ignore i_inc index for strealine
+                streamlines.append(np.array([vertex2vox[v] for v in p[1:-1]])[:,:3])
+
+    tgm = StatefulTractogram(
+                        streamlines=streamlines,
+                        reference=ref_img,
+                        space=Space.VOX,
+                        origin=Origin.NIFTI)
+
+    save_tck(tgm, fname, bbox_valid_check=False)
 
 
 def compute_shortest_paths_COM2ALL_w(g, COMs, rois_vertex, w='neg_log'):
