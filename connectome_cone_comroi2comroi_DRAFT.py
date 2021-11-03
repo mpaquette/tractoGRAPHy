@@ -9,7 +9,7 @@ from utils import mask2vertex_cone, \
                   mask_COM, \
                   load_graph, \
                   compute_shortest_paths_COM2COM, \
-                  save_COM2COM_path_as_streamlines_cone
+                  save_COM2COM_path_as_streamlines
 
 
 
@@ -39,25 +39,26 @@ rois_vertex_cone = [mask2vertex_cone(label_map==i, vox2vertex) for i in range(1,
 
 
 
+for i in range(1, label_map.max()+1):
+	new_vert_id = g.vs['name'].index('COM_{}'.format(i))
+	g.vs[new_vert_id]['name'] = 'ROI_{}'.format(i)
+
+
+start_time = time()
 # compute center-of-mass -ish voxel for each roi
 # add nodes
-g.add_vertices(['COM_{}'.format(i) for i in range(1, label_map.max()+1)])
+g.add_vertices(['ROI_{}'.format(i) for i in range(1, label_map.max()+1)])
 
 rois_center_vertex_cone = []
 edges_to_add = []
 for i in range(1, label_map.max()+1):
-    # get roi
-    roi_mask = (label_map==i)
-    # get COM vox
-    COM = mask_COM(roi_mask)
-    # get vertex id of all 26 node at that vox
-    COM_vertex_cone = [vox2vertex[COM+(i_inc,)] for i_inc in range(26)]
+    ROI_vertex_cone = [vert for voxvert in rois_vertex_cone[i-1] for vert in voxvert]
     # add new vertex to converge them all there
-    new_vert_id = g.vs['name'].index('COM_{}'.format(i))
+    new_vert_id = g.vs['name'].index('ROI_{}'.format(i))
     rois_center_vertex_cone.append(new_vert_id)
     # create IN and OUT edge for all node at COM
-    edges_to_add += [(new_vert_id, i_vert) for i_vert in COM_vertex_cone]
-    edges_to_add += [(i_vert, new_vert_id) for i_vert in COM_vertex_cone]
+    edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex_cone]
+    edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex_cone]
 
 
 merge_w = 10000 # remove twice from computed path weight
@@ -66,6 +67,9 @@ merge_w = 10000 # remove twice from computed path weight
 # instead we put very very expensive nodes, and we can remove it when counting
 g.add_edges(edges_to_add, 
             {'neg_log':[merge_w]*len(edges_to_add)})
+end_time = time()
+print('Make super-ROI = {:.2f} s'.format(end_time - start_time))
+
 
 
 
@@ -91,20 +95,21 @@ matrix_prob = np.exp(-matrix_weight)
 matrix_geom = np.exp(-matrix_weight / matrix_length)
 
 
-np.save(mainpath+'graph_mat_cone60_com2com_w.npy', matrix_weight)
-np.save(mainpath+'graph_mat_cone60_com2com_l.npy', matrix_length)
-np.save(mainpath+'graph_mat_cone60_com2com_prob.npy', matrix_prob)
-np.save(mainpath+'graph_mat_cone60_com2com_geom.npy', matrix_geom)
+np.save(mainpath+'graph_mat_cone60_comroi2comroi_w.npy', matrix_weight)
+np.save(mainpath+'graph_mat_cone60_comroi2comroi_l.npy', matrix_length)
+np.save(mainpath+'graph_mat_cone60_comroi2comroi_prob.npy', matrix_prob)
+np.save(mainpath+'graph_mat_cone60_comroi2comroi_geom.npy', matrix_geom)
 
 
 
 
 start_time = time()
-fname_stl = mainpath + 'shortest_cone60_COM2COM.tck'
-save_COM2COM_path_as_streamlines_cone(paths_uncorr, 
+fname_stl = mainpath + 'shortest_cone60_COMROI2COMROI.tck'
+save_COM2COM_path_as_streamlines(paths_uncorr, 
                                  vertex2vox, 
                                  ref_img=mask_img, 
-                                 fname=fname_stl)
+                                 fname=fname_stl,
+                                 exclude_endpoints=True)
 end_time = time()
 print('Elapsed time (save path as streamlines) = {:.2f} s'.format(end_time - start_time))
 

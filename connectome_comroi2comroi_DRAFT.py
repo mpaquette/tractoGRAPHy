@@ -9,7 +9,7 @@ from utils import mask2vertex, \
                   mask_COM, \
                   load_graph, \
                   compute_shortest_paths_COM2COM, \
-                  save_COM2COM_path_as_streamlines_cone
+                  save_COM2COM_path_as_streamlines
 
 
 
@@ -46,16 +46,17 @@ start_time = time()
 # add nodes
 g.add_vertices(['ROI_{}'.format(i) for i in range(1, label_map.max()+1)])
 
-rois_center_vertex_cone = []
+rois_center_vertex = []
 edges_to_add = []
 for i in range(1, label_map.max()+1):
-    ROI_vertex_cone = [vert for voxvert in rois_vertex_cone[i-1] for vert in voxvert]
+    # ROI_vertex_cone = [vert for voxvert in rois_vertex_cone[i-1] for vert in voxvert]
+    ROI_vertex = rois_vertex[i-1]
     # add new vertex to converge them all there
     new_vert_id = g.vs['name'].index('ROI_{}'.format(i))
-    rois_center_vertex_cone.append(new_vert_id)
+    rois_center_vertex.append(new_vert_id)
     # create IN and OUT edge for all node at COM
-    edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex_cone]
-    edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex_cone]
+    edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex]
+    edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex]
 
 
 merge_w = 10000 # remove twice from computed path weight
@@ -78,7 +79,7 @@ print('Make super-ROI = {:.2f} s'.format(end_time - start_time))
 
 
 start_time = time()
-paths, paths_length, weights = compute_shortest_paths_COM2COM(g,
+paths_uncorr, paths_length_uncorr, path_weights_uncorr = compute_shortest_paths_COM2COM(g,
                                                               rois_center_vertex,
                                                               w='neg_log')
 
@@ -89,27 +90,37 @@ print('Shortest path (COM2COM) = {:.2f} s'.format(end_time - start_time))
 
 
 
+## correct values and
 ## save connectome matrix
-matrix_weight = np.array(weights)
-matrix_length = np.array(paths_length)
+matrix_weight = np.array(path_weights_uncorr)
+matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
+matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
+
+
+matrix_length = np.array(paths_length_uncorr)
+matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
+matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
+
+
 matrix_prob = np.exp(-matrix_weight)
 matrix_geom = np.exp(-matrix_weight / matrix_length)
 
 
-np.save(mainpath+'graph_mat_com2com_w.npy', matrix_weight)
-np.save(mainpath+'graph_mat_com2com_l.npy', matrix_length)
-np.save(mainpath+'graph_mat_com2com_prob.npy', matrix_prob)
-np.save(mainpath+'graph_mat_com2com_geom.npy', matrix_geom)
+np.save(mainpath+'graph_mat_roicom2roicom_w.npy', matrix_weight)
+np.save(mainpath+'graph_mat_roicom2roicom_l.npy', matrix_length)
+np.save(mainpath+'graph_mat_roicom2roicom_prob.npy', matrix_prob)
+np.save(mainpath+'graph_mat_roicom2roicom_geom.npy', matrix_geom)
 
 
 
 
 start_time = time()
-fname_stl = mainpath + 'shortest_COM2COM.tck'
-save_COM2COM_path_as_streamlines(paths, 
+fname_stl = mainpath + 'shortest_ROICOM2ROICOM.tck'
+save_COM2COM_path_as_streamlines(paths_uncorr, 
                                  vertex2vox, 
                                  ref_img=mask_img, 
-                                 fname=fname_stl)
+                                 fname=fname_stl,
+                                 exclude_endpoints=False)
 end_time = time()
 print('Elapsed time (save path as streamlines) = {:.2f} s'.format(end_time - start_time))
 

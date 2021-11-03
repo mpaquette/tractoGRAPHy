@@ -9,7 +9,7 @@ from utils import mask2vertex_cone, \
                   mask_COM, \
                   load_graph, \
                   compute_shortest_paths_COM2COM, \
-                  save_COM2COM_path_as_streamlines_cone
+                  save_COM2COM_path_as_streamlines
 
 
 
@@ -101,10 +101,11 @@ np.save(mainpath+'graph_mat_cone60_com2com_geom.npy', matrix_geom)
 
 start_time = time()
 fname_stl = mainpath + 'shortest_cone60_COM2COM.tck'
-save_COM2COM_path_as_streamlines_cone(paths_uncorr, 
+save_COM2COM_path_as_streamlines(paths_uncorr, 
                                  vertex2vox, 
                                  ref_img=mask_img, 
-                                 fname=fname_stl)
+                                 fname=fname_stl,
+                                 exclude_endpoints=True)
 end_time = time()
 print('Elapsed time (save path as streamlines) = {:.2f} s'.format(end_time - start_time))
 

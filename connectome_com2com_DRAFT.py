@@ -82,7 +82,8 @@ fname_stl = mainpath + 'shortest_COM2COM.tck'
 save_COM2COM_path_as_streamlines(paths, 
                                  vertex2vox, 
                                  ref_img=mask_img, 
-                                 fname=fname_stl)
+                                 fname=fname_stl,
+                                 exclude_endpoints=False)
 end_time = time()
 print('Elapsed time (save path as streamlines) = {:.2f} s'.format(end_time - start_time))
 
