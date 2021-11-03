@@ -39,9 +39,9 @@ rois_vertex_cone = [mask2vertex_cone(label_map==i, vox2vertex) for i in range(1,
 
 
 
-for i in range(1, label_map.max()+1):
-	new_vert_id = g.vs['name'].index('COM_{}'.format(i))
-	g.vs[new_vert_id]['name'] = 'ROI_{}'.format(i)
+v_count_before = len(g.vs)
+e_count_before = len(g.es)
+
 
 
 start_time = time()
@@ -70,6 +70,14 @@ g.add_edges(edges_to_add,
 end_time = time()
 print('Make super-ROI = {:.2f} s'.format(end_time - start_time))
 
+
+
+v_count_after = len(g.vs)
+e_count_after = len(g.es)
+
+
+print('new vcount match predition = {}'.format(v_count_after - v_count_before == len(rois_vertex_cone)))
+print('new ecount match predition = {}'.format(e_count_after - e_count_before == 26*2*np.sum(label_map>0)))
 
 
 
