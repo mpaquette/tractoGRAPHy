@@ -9,7 +9,7 @@ from utils import mask2vertex, \
                   mask_COM, \
                   load_graph, \
                   compute_shortest_paths_COM2COM, \
-                  save_COM2COM_path_as_streamlines
+                  save_COM2COM_path_as_streamlines_cone
 
 
 
@@ -39,13 +39,40 @@ rois_vertex = [mask2vertex(label_map==i, vox2vertex) for i in range(1, label_map
 
 
 
+
+
+start_time = time()
 # compute center-of-mass -ish voxel for each roi
-rois_center_vertex = []
-# for roi_mask in rois_mask:
-#   rois_center_vertex.append(vox2vertex[mask_COM(roi_mask)])
+# add nodes
+g.add_vertices(['ROI_{}'.format(i) for i in range(1, label_map.max()+1)])
+
+rois_center_vertex_cone = []
+edges_to_add = []
 for i in range(1, label_map.max()+1):
-    roi_mask = (label_map==i)
-    rois_center_vertex.append(vox2vertex[mask_COM(roi_mask)])
+    ROI_vertex_cone = [vert for voxvert in rois_vertex_cone[i-1] for vert in voxvert]
+    # add new vertex to converge them all there
+    new_vert_id = g.vs['name'].index('ROI_{}'.format(i))
+    rois_center_vertex_cone.append(new_vert_id)
+    # create IN and OUT edge for all node at COM
+    edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex_cone]
+    edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex_cone]
+
+
+merge_w = 10000 # remove twice from computed path weight
+
+# edge of zero could give loops
+# instead we put very very expensive nodes, and we can remove it when counting
+g.add_edges(edges_to_add, 
+            {'neg_log':[merge_w]*len(edges_to_add)})
+end_time = time()
+print('Make super-ROI = {:.2f} s'.format(end_time - start_time))
+
+
+
+
+
+
+
 
 
 

@@ -7,6 +7,7 @@ from dipy.data import get_sphere
 from utils import build_assign_mat_cone, save_graph
 
 
+
 ang_th = 60
 
 # load data
@@ -24,7 +25,9 @@ mask = nib.load(mask_fname).get_fdata().astype(np.bool)
 # get assignation matrix between sphere and neighboor
 sphere = get_sphere('repulsion724').subdivide(1)
 # get assignation matrix between sphere and neighboor for each angle
-assign_mat, vec = build_assign_mat_cone(sphere.vertices, ang_th, 3)
+_, vec = build_assign_mat_cone(sphere.vertices, ang_th, 3)
+
+
 
 
 
