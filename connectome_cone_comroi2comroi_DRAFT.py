@@ -81,6 +81,13 @@ print('new ecount match predition = {}'.format(e_count_after - e_count_before ==
 
 
 
+
+
+
+
+
+
+
 start_time = time()
 paths_uncorr, paths_length_uncorr, path_weights_uncorr = compute_shortest_paths_COM2COM(g, rois_center_vertex_cone, w='neg_log')
 end_time = time()
@@ -120,6 +127,9 @@ save_COM2COM_path_as_streamlines(paths_uncorr,
                                  exclude_endpoints=True)
 end_time = time()
 print('Elapsed time (save path as streamlines) = {:.2f} s'.format(end_time - start_time))
+
+
+
 
 
 

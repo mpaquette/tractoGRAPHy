@@ -2,8 +2,9 @@
 
 # assign label to each maskroi, match collision to nearest COM
 
-
-
+import numpy as np 
+import nibabel as nib
+from utils import mask2vertex
 
 
 # load roi mask and clip to WM mask
@@ -14,12 +15,15 @@ roifiles = [f for f in listdir(roipath) if isfile(join(roipath, f))]
 rois_fname = [roipath + roifiles[i] for i in range(len(roifiles))]
 
 
+mainpath = '/data/pt_02015/human_test_data_deconvolution_08088.b3/tp0/mrtrix/'
+mask_fname = mainpath + 'wmmask.nii'
+mask_img = nib.load(mask_fname)
+affine = mask_img.affine
+mask = mask_img.get_fdata().astype(np.bool)
+
+
 rois_mask_tmp = [nib.load(fname).get_fdata().astype(np.bool) for fname in rois_fname]
 rois_mask = [np.logical_and(roi_mask, mask) for roi_mask in rois_mask_tmp]
-
-
-rois_vertex = [mask2vertex(roi_mask, vox2vertex) for roi_mask in rois_mask]
-
 
 
 
@@ -45,10 +49,11 @@ for xyz in np.ndindex(data_label_init.shape):
 	data_label_init[xyz] = ()
 
 
-for idx in order:
+for ilabel, idx in enumerate(order):
 	X,Y,Z = np.where(rois_mask[idx])
 	for i in range(len(X)):
-		data_label_init[X[i], Y[i], Z[i]] += (idx+1,)
+		# data_label_init[X[i], Y[i], Z[i]] += (idx+1,)
+		data_label_init[X[i], Y[i], Z[i]] += (ilabel+1,)
 
 
 
@@ -89,7 +94,7 @@ for xyz in np.ndindex(data_label_init.shape):
 # tmp_label, n_label = label(rois_mask[90], structure)
 
 
-
+from scipy.ndimage import center_of_mass
 
 rois_center_voxel = []
 for idx in order:
