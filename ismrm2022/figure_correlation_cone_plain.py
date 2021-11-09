@@ -47,7 +47,7 @@ pl.scatter(log10_prob_graphcone.ravel(), log10_prob_graph.ravel(),
 
 pl.xlabel(r'$\log_{{10}}{{(\mathbb{{P}}_{{path}}^{{\text{{oriented}}}})}}$', fontsize=16)
 pl.ylabel(r'$\log_{{10}}{{(\mathbb{{P}}_{{path}}^{{\text{{plain}}}})}}$', fontsize=16)
-pl.title('Plain Graph vs Oriented Graph ', fontsize=18)
+pl.title('Plain Graph vs Oriented Graph', fontsize=18)
 
 
 
