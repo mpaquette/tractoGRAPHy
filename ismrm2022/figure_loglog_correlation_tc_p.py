@@ -55,7 +55,7 @@ rho, _ = spearmanr(log10_prob_graph_row_norm.ravel(), log_tc_plus_1.ravel())
 
 x_pos_text = -32
 y_pos_text = 3.5
-offset_text = 0.5
+offset_text = 0.4
 # pl.text(x_pos_text, y_pos_text, 'R^2 = {:.2f}'.format(R2))
 pl.text(x_pos_text, y_pos_text, 
 	    r'''Pearson's $R = {:.2f}$'''.format(R), fontsize=16)
@@ -67,8 +67,9 @@ pl.text(x_pos_text, y_pos_text+offset_text,
 
 pl.savefig('/data/hu_paquette/work/tractoGRAPHy/ismrm2022/images/'+'loglog_correlation_tc_p.png',
 			dpi=300,
-			pad_inches=0,
-			transparent=True)
+			pad_inches=0.25,
+			transparent=True,
+			bbox_inches='tight')
 
 pl.close()
 
