@@ -80,17 +80,17 @@ pl.close()
 
 
 
-from scipy.stats import gaussian_kde
+# from scipy.stats import gaussian_kde
 
-x = log10_prob_graph_row_norm.ravel()
-y = log_tc_plus_1.ravel()
-# Calculate the point density
-xy = np.vstack([x,y])
-z = gaussian_kde(xy)(xy)
+# x = log10_prob_graph_row_norm.ravel()
+# y = log_tc_plus_1.ravel()
+# # Calculate the point density
+# xy = np.vstack([x,y])
+# z = gaussian_kde(xy)(xy)
 
-# Sort the points by density, so that the densest points are plotted last
-idx = z.argsort()
-x, y, z = x[idx], y[idx], z[idx]
+# # Sort the points by density, so that the densest points are plotted last
+# idx = z.argsort()
+# x, y, z = x[idx], y[idx], z[idx]
 
 
 
@@ -137,6 +137,82 @@ pl.savefig('/data/hu_paquette/work/tractoGRAPHy/ismrm2022/images/'+'loglog_corre
 pl.close()
 
 # pl.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## attempt 2
+
+bands = [np.log10(i) for i in range(1,6)]
+bands_x = [x[y==th] for th in bands]
+bands_y = [y[y==th] for th in bands]
+bands_z = [z[y==th] for th in bands]
+
+bands_x.append(x[y>bands[-1]])
+bands_y.append(y[y>bands[-1]])
+bands_z.append(z[y>bands[-1]])
+
+
+pl.figure()
+
+for ii in range(len(bands_x)):
+	xx = bands_x[ii]
+	yy = bands_y[ii]
+	zz = bands_z[ii]
+	pl.scatter(xx, yy, c=zz, s=50, 
+		       alpha=0.9,
+		       edgecolors='none')
+
+
+pl.xlabel(r'$\log_{{10}}{{(\mathbb{{P}}_{{path}})}}$', fontsize=16)
+pl.ylabel(r'$\log_{{10}}{{(\text{{Streamline}}_{{\text{{count}}}} + 1)}}$', fontsize=16)
+pl.title('Connectome weights', fontsize=18)
+# pl.title('Connectome weights: Streamline Count vs Shortest Path Probability', fontsize=18)
+
+
+
+R = np.corrcoef(log10_prob_graph_row_norm.ravel(), log_tc_plus_1.ravel())[0,1]
+rho, _ = spearmanr(log10_prob_graph_row_norm.ravel(), log_tc_plus_1.ravel())
+
+
+x_pos_text = -32
+y_pos_text = 3.5
+offset_text = 0.4
+# pl.text(x_pos_text, y_pos_text, 'R^2 = {:.2f}'.format(R2))
+pl.text(x_pos_text, y_pos_text, 
+	    r'''Pearson's $R = {:.2f}$'''.format(R), fontsize=16)
+# pl.text(x_pos_text, y_pos_text+offset_text, 'rho = {:.2f}'.format(rho))
+pl.text(x_pos_text, y_pos_text+offset_text, 
+	    r'''Spearman's $\rho = {:.2f}$'''.format(rho), fontsize=16)
+
+
+
+pl.savefig('/data/hu_paquette/work/tractoGRAPHy/ismrm2022/images/'+'loglog_correlation_tc_p_density_6scalings.png',
+			dpi=300,
+			pad_inches=0.25,
+			transparent=True,
+			bbox_inches='tight')
+
+pl.close()
+
+# pl.show()
+
+
+
+
+
+
 
 
 
