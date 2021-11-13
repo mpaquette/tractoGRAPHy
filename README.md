@@ -2,7 +2,7 @@
 Graph-based alternative to probabilistic tractography for diffusion MRI connectivity matrix.  
 
 
-## Connectivity matrix from a fODF weighted graph: An alternative to probabilistic tractography  
+*Connectivity matrix from a fODF weighted graph: An alternative to probabilistic tractography*  
 by  
 Michael Paquette, Cornelius Eichner, and Alfred Anwander  
 Submitted to ISMRM 2022  
