@@ -80,20 +80,6 @@ pl.close()
 
 
 
-# from scipy.stats import gaussian_kde
-
-# x = log10_prob_graph_row_norm.ravel()
-# y = log_tc_plus_1.ravel()
-# # Calculate the point density
-# xy = np.vstack([x,y])
-# z = gaussian_kde(xy)(xy)
-
-# # Sort the points by density, so that the densest points are plotted last
-# idx = z.argsort()
-# x, y, z = x[idx], y[idx], z[idx]
-
-
-
 
 
 

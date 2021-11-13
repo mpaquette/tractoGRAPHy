@@ -65,11 +65,13 @@ Needs a oriented graph, a mask, a label map and a target_type.
 
 Test data created from [Fiberfox replications of the FiberCup datasets]{https://www.nitrc.org/frs/?group_id=627}
 
+test_data/results included generated probability maps, graphs, connectomes and shortest paths for naive, oriented, for COM and for ROI.
 
 
 TODO:  
 	Include out-of-mask node in compute_probability so that renormalization doesnt favor mask edges  
 	Save neighboor point attribution during probability computation and load them during graph building  
+	Make shortest path script robust to unconnected ROI
 
 
 
