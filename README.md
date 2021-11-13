@@ -10,10 +10,10 @@ Submitted to ISMRM 2022
 
 ### Naive graph approach:  
 For each voxel inside a "tractography" mask (i.e. strict WM mask):  
-	Project the fODF to a fine sphere  
-	Assign each orientation of the sphere to one of 26 neighboor in a 3x3x3 cube  
-	Sum and normalize fODF value for each neighbor to compute probability of connection  
-	You can threshold the fODF based on a percentage of their maxima to nullify probability in direction perpendicular to maximas while retaining some of the lobes fanning  
+- Project the fODF to a fine sphere  
+- Assign each orientation of the sphere to one of 26 neighboor in a 3x3x3 cube  
+- Sum and normalize fODF value for each neighbor to compute probability of connection  
+- You can threshold the fODF based on a percentage of their maxima to nullify probability in direction perpendicular to maximas while retaining some of the lobes fanning  
 Build a directed graph with a node for each voxel and these probability of connection  
 Connectivity matrices are built from a label map using shortest paths  
 
@@ -23,11 +23,11 @@ Also, having crossings penalise the probability of propagation even if the taken
 
 ### Oriented graph approach:  
 For each voxel inside a "tractography" mask (i.e. strict WM mask):  
-	Project the fODF to a fine sphere  
-	Assign each orientation of the sphere to one of 26 neighboor in a 3x3x3 cube  
-	Decide on a cone size to restrict orientation into  
-	Centering a cone around each orientation from each neighboor, compute a mask over the neighboor point assignement  
-	Sum and normalize fODF value for each neighbor for each cone orientation to compute the probability of connection for each orientation.  
+- Project the fODF to a fine sphere  
+- Assign each orientation of the sphere to one of 26 neighboor in a 3x3x3 cube  
+- Decide on a cone size to restrict orientation into  
+- Centering a cone around each orientation from each neighboor, compute a mask over the neighboor point assignement  
+- Sum and normalize fODF value for each neighbor for each cone orientation to compute the probability of connection for each orientation.  
 Build a directed graph with a 26 node for each voxel (one for each neighboor) and these probability of connection  
 Connectivity matrices are built from a label map using shortest paths  
 
@@ -62,16 +62,15 @@ Needs a oriented graph, a mask, a label map and a target_type.
 
 
 
-Test data created from [Fiberfox replications of the FiberCup datasets]{https://www.nitrc.org/frs/?group_id=627}
+Test data created from [Fiberfox replications of the FiberCup datasets](https://www.nitrc.org/frs/?group_id=627)  
 
-test_data/results included generated probability maps, graphs, connectomes and shortest paths for naive, oriented, for COM and for ROI.
+test_data/results included generated probability maps, graphs, connectomes and shortest paths for naive, oriented, for COM and for ROI.  
 
 
 TODO:  
-	Include out-of-mask node in compute_probability so that renormalization doesnt favor mask edges  
-	Save neighboor point attribution during probability computation and load them during graph building  
-	Make shortest path script robust to unconnected ROI
-
+- Include out-of-mask node in compute_probability so that renormalization doesnt favor mask edges  
+- Save neighboor point attribution during probability computation and load them during graph building  
+- Make shortest path script robust to unconnected ROI  
 
 
 
