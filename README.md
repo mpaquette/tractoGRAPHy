@@ -36,28 +36,38 @@ The orientation of the cone depend on the angle of arrival into a given voxel (i
 
 
 ```
-compute_probability_naive_graph.py
+compute_probability_naive_graph.py  
 ```
 Compute and save the neighboor connection probability for naive graph construction.  
 Needs a mask, an fODF field (in tournier07/Mrtrix3 format) and a relative ODF threshold.  
 
+```
 build_naive_graph.py  
+```
 Compute and save naive graph construction.  
 Needs a mask and a probability map (from compute_probability_naive_graph.py).  
 
+```
 compute_shortest_path_naive_graph.py  
+```
 Compute shortest paths and connectivity matrices for naive graph.  
 Needs a naive graph, a mask, a label map and a target_type.  
 
+```
 compute_probability_oriented_graph.py  
+```
 Compute and save the neighboor connection probability for oriented graph construction.  
 Needs a mask, an fODF field (in tournier07/Mrtrix3 format), a relative ODF threshold and a cone half-angle.  
 
+```
 build_oriented_graph.py  
+```
 Compute and save oriented graph construction.  
 Needs a mask, a probability map (from compute_probability_oriented_graph.py) and the cone half-angle that was used.  
 
+```
 compute_shortest_path_oriented_graph.py  
+```
 Compute shortest paths and connectivity matrices for oriented graph.  
 Needs a oriented graph, a mask, a label map and a target_type.  
 
