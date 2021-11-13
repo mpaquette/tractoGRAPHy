@@ -7,7 +7,7 @@ from time import time
 
 import igraph as ig
 
-from utils import mask2vertex, \
+from utils import mask2vertex_cone, \
                   mask_COM, \
                   load_graph, \
                   compute_shortest_paths_COM2COM, \
@@ -15,8 +15,8 @@ from utils import mask2vertex, \
 
 
 DESCRIPTION = """
-Compute shortest paths and connectivity matrices for naive graph.
-Needs a naive graph, a mask, a label map and a target_type.
+Compute shortest paths and connectivity matrices for oriented graph.
+Needs a oriented graph, a mask, a label map and a target_type.
 
 The label map is expected to have integer value above 0 for each source/target.
 We intersect the label map with the mask and discard what's outside.
@@ -96,21 +96,47 @@ def main():
             print('Label map has no voxel inside mask for label = {:}'.format(i))
 
 
+
+    merge_w = 10000 # remove twice from computed path weight
+
+
     if args.target == 'COM':
         print('Using Center-of-Mass as sources/targets')
 
         # compute center-of-mass -ish voxel for each roi
+        # add nodes
+        g.add_vertices(['COM_{}'.format(i) for i in range(1, label_map.max()+1)])
+
         target_vertex = []
+        edges_to_add = []
         for i in range(1, label_map.max()+1):
+            # get roi
             roi_mask = (label_map==i)
-            target_vertex.append(vox2vertex[mask_COM(roi_mask)])
+            # get COM vox
+            COM = mask_COM(roi_mask)
+            # get vertex id of all 26 node at that vox
+            COM_vertex_cone = [vox2vertex[COM+(i_inc,)] for i_inc in range(26)]
+            # add new vertex to converge them all there
+            new_vert_id = g.vs['name'].index('COM_{}'.format(i))
+            target_vertex.append(new_vert_id)
+            # create IN and OUT edge for all node at COM
+            edges_to_add += [(new_vert_id, i_vert) for i_vert in COM_vertex_cone]
+            edges_to_add += [(i_vert, new_vert_id) for i_vert in COM_vertex_cone]
+
+        # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
+        # edge of zero could give loops
+        # instead we put very very expensive nodes, and we can remove it when counting
+        g.add_edges(edges_to_add, 
+                    {'neg_log':[merge_w]*len(edges_to_add)})
+
+        print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
+        print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
 
 
     elif args.taget == 'ROI':
         print('Using ROI nodes as sources/targets')
 
-        rois_vertex = [mask2vertex(label_map==i, vox2vertex) for i in range(1, label_map.max()+1)]
-
+        rois_vertex_cone = [mask2vertex_cone(label_map==i, vox2vertex) for i in range(1, label_map.max()+1)]
 
         start_time = time()
         # compute center-of-mass -ish voxel for each roi
@@ -120,26 +146,25 @@ def main():
         target_vertex = []
         edges_to_add = []
         for i in range(1, label_map.max()+1):
-            ROI_vertex = rois_vertex[i-1]
+            ROI_vertex_cone = [vert for voxvert in rois_vertex_cone[i-1] for vert in voxvert]
             # add new vertex to converge them all there
             new_vert_id = g.vs['name'].index('ROI_{}'.format(i))
             target_vertex.append(new_vert_id)
             # create IN and OUT edge for all node at COM
-            edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex]
-            edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex]
+            edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex_cone]
+            edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex_cone]
+
 
         # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
-        merge_w = 10000 # remove twice from computed path weight
-
         # edge of zero could give loops
         # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
                     {'neg_log':[merge_w]*len(edges_to_add)})
         end_time = time()
-
-        print('Making ROI-nodes = {:.2f} s'.format(end_time - start_time))
+        print('Making ROI-node = {:.2f} s'.format(end_time - start_time))
         print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
         print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
+
 
 
 
@@ -153,25 +178,17 @@ def main():
     print('Elapsed time = {:.2f} s'.format(end_time - start_time))
 
 
-    if args.target == 'COM':
-        # build matrices from shortest path
-        matrix_weight = np.array(weights)
-        matrix_length = np.array(paths_length)
-        matrix_prob = np.exp(-matrix_weight)
-        matrix_geom = np.exp(-matrix_weight / matrix_length)
+    ## correct values
+    matrix_weight = np.array(path_weights)
+    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
+    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
 
-    elif args.taget == 'ROI':
-        ## correct values to account for big ROI edges
-        matrix_weight = np.array(path_weights)
-        matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
-        matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
+    matrix_length = np.array(paths_length)
+    matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
+    matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
 
-        matrix_length = np.array(paths_length)
-        matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
-        matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
-
-        matrix_prob = np.exp(-matrix_weight)
-        matrix_geom = np.exp(-matrix_weight / matrix_length)
+    matrix_prob = np.exp(-matrix_weight)
+    matrix_geom = np.exp(-matrix_weight / matrix_length)
 
 
     # save matrice
@@ -186,17 +203,11 @@ def main():
     if args.savepath is not None:
         print('Saving paths as tck')
         start_time = time()
-        if args.target == 'COM':
-            tmp_exclude_endpoints = False
-        elif args.taget == 'ROI':
-            tmp_exclude_endpoints = True
-
         save_COM2COM_path_as_streamlines(paths, 
                                          vertex2vox, 
                                          ref_img=mask_img, 
                                          fname=fname_stl,
-                                         exclude_endpoints=tmp_exclude_endpoints)
-
+                                         exclude_endpoints=True)
 
         end_time = time()
         print('Elapsed time = {:.2f} s'.format(end_time - start_time))
