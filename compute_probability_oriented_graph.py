@@ -65,6 +65,7 @@ def main():
     print('inside mask {:}'.format(fmask_fname))
     print('mask has {:} voxels'.format(mask.sum()))
     print('Using fODF threshold of {:.2f}% of max(fODF)'.format(100*ODF_TH))
+    print('Using cone of half-angle {:.1f} degrees'.format(ang_TH))
 
     # setup sh matrix
     lmax = calculate_max_order(sh.shape[3], False)
