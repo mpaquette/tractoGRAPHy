@@ -38,18 +38,29 @@ The orientation of the cone depend on the angle of arrival into a given voxel (i
 
 
 compute_probability_naive_graph.py  
-Compute and save the neighboor connection probability for naive graph construction from a mask, an fODF field (in tournier07/Mrtrix3 format) and a relative ODF threshold.   
+Compute and save the neighboor connection probability for naive graph construction.  
+Needs a mask, an fODF field (in tournier07/Mrtrix3 format) and a relative ODF threshold.  
+
+build_naive_graph.py  
+Compute and save naive graph construction.  
+Needs a mask and a probability map (from compute_probability_naive_graph.py).  
 
 compute_probability_oriented_graph.py  
-Compute and save the neighboor connection probability for oriented graph construction from a mask, an fODF field (in tournier07/Mrtrix3 format) a relative ODF threshold and a cone half-angle.   
+Compute and save the neighboor connection probability for oriented graph construction.  
+Needs a mask, an fODF field (in tournier07/Mrtrix3 format), a relative ODF threshold and a cone half-angle.  
 
+build_oriented_graph.py  
+Compute and save oriented graph construction.  
+Needs a mask, a probability map (from compute_probability_oriented_graph.py) and the cone half-angle that was used.  
 
 
 
 
 
 TODO:  
-	Include out-of-mask node in compute_probability so that renormalization doesnt favor mask edges 
+	Include out-of-mask node in compute_probability so that renormalization doesnt favor mask edges  
+	Save neighboor point attribution during probability computation and load them during graph building  
+
 
 
 

@@ -122,6 +122,10 @@ def main():
     print('Elapsed time = {:.2f} s'.format(end_time - start_time))
 
 
+    print('Graph has {:} nodes'.format(len(g.vs)))
+    print('Graph has {:} edges'.format(len(g.es)))
+
+
     save_graph(g, out_fname)
 
 

@@ -133,6 +133,9 @@ def main():
     # for memory we delete the prob
     del prob
 
+    print('Graph has {:} nodes'.format(len(g.vs)))
+    print('Graph has {:} edges'.format(len(g.es)))
+
 
     save_graph(g, out_fname)
 
