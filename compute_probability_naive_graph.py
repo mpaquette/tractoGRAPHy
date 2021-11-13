@@ -59,9 +59,9 @@ def main():
 
     mask = nib.load(mask_fname).get_fdata().astype(np.bool)
     print('Computing probability from fODF {:}'.format(fod_fname))
-    print('inside mask {:}'.format(fmask_fname))
+    print('inside mask {:}'.format(mask_fname))
     print('mask has {:} voxels'.format(mask.sum()))
-    print('Using fODF threshold of {:.2f}% of max(fODF)'.format(100*ODF_TH))
+    print('Using fODF threshold of {:.1f}% of max(fODF)'.format(100*ODF_TH))
 
     # setup sh matrix
     lmax = calculate_max_order(sh.shape[3], False)

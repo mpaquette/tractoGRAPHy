@@ -59,7 +59,7 @@ def main():
     mask = nib.load(mask_fname).get_fdata().astype(np.bool)
 
     print('Computing graph with probabilities from {:}'.format(prob_fname))
-    print('inside mask {:}'.format(fmask_fname))
+    print('inside mask {:}'.format(mask_fname))
     print('mask has {:} voxels'.format(mask.sum()))
 
 

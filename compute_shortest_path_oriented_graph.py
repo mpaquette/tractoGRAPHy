@@ -133,7 +133,7 @@ def main():
         print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
 
 
-    elif args.taget == 'ROI':
+    elif args.target == 'ROI':
         print('Using ROI nodes as sources/targets')
 
         rois_vertex_cone = [mask2vertex_cone(label_map==i, vox2vertex) for i in range(1, label_map.max()+1)]
@@ -179,7 +179,7 @@ def main():
 
 
     ## correct values
-    matrix_weight = np.array(path_weights)
+    matrix_weight = np.array(weights)
     matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
     matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
 
@@ -192,7 +192,7 @@ def main():
 
 
     # save matrice
-    print('Saving matrices as {:}_{w,l,prob,geom}.npy'.format(out_basefname))
+    print('Saving matrices as {:}_(w,l,prob,geom).npy'.format(out_basefname))
     np.save(out_basefname + '_w.npy', matrix_weight)
     np.save(out_basefname + '_l.npy', matrix_length)
     np.save(out_basefname + '_prob.npy', matrix_prob)
@@ -206,7 +206,7 @@ def main():
         save_COM2COM_path_as_streamlines(paths, 
                                          vertex2vox, 
                                          ref_img=mask_img, 
-                                         fname=fname_stl,
+                                         fname=args.savepath,
                                          exclude_endpoints=True)
 
         end_time = time()

@@ -106,7 +106,7 @@ def main():
             target_vertex.append(vox2vertex[mask_COM(roi_mask)])
 
 
-    elif args.taget == 'ROI':
+    elif args.target == 'ROI':
         print('Using ROI nodes as sources/targets')
 
         rois_vertex = [mask2vertex(label_map==i, vox2vertex) for i in range(1, label_map.max()+1)]
@@ -160,9 +160,9 @@ def main():
         matrix_prob = np.exp(-matrix_weight)
         matrix_geom = np.exp(-matrix_weight / matrix_length)
 
-    elif args.taget == 'ROI':
+    elif args.target == 'ROI':
         ## correct values to account for big ROI edges
-        matrix_weight = np.array(path_weights)
+        matrix_weight = np.array(weights)
         matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
         matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
 
@@ -175,7 +175,7 @@ def main():
 
 
     # save matrice
-    print('Saving matrices as {:}_{w,l,prob,geom}.npy'.format(out_basefname))
+    print('Saving matrices as {:}_(w,l,prob,geom).npy'.format(out_basefname))
     np.save(out_basefname + '_w.npy', matrix_weight)
     np.save(out_basefname + '_l.npy', matrix_length)
     np.save(out_basefname + '_prob.npy', matrix_prob)
@@ -188,13 +188,13 @@ def main():
         start_time = time()
         if args.target == 'COM':
             tmp_exclude_endpoints = False
-        elif args.taget == 'ROI':
+        elif args.target == 'ROI':
             tmp_exclude_endpoints = True
 
         save_COM2COM_path_as_streamlines(paths, 
                                          vertex2vox, 
                                          ref_img=mask_img, 
-                                         fname=fname_stl,
+                                         fname=args.savepath,
                                          exclude_endpoints=tmp_exclude_endpoints)
 
 
