@@ -2,7 +2,7 @@
 Graph-based alternative to probabilistic tractography for diffusion MRI connectivity matrix.  
 
 
-*Connectivity matrix from a fODF weighted graph: An alternative to probabilistic tractography*  
+**Connectivity matrix from a fODF weighted graph: An alternative to probabilistic tractography**  
 by  
 Michael Paquette, Cornelius Eichner, and Alfred Anwander  
 Submitted to ISMRM 2022  
@@ -35,8 +35,9 @@ Path propagation is now retricted inside a cone similarly to probabilistic tract
 The orientation of the cone depend on the angle of arrival into a given voxel (i.e. which neighboor it came from).  
 
 
-
-compute_probability_naive_graph.py  
+```
+compute_probability_naive_graph.py
+```
 Compute and save the neighboor connection probability for naive graph construction.  
 Needs a mask, an fODF field (in tournier07/Mrtrix3 format) and a relative ODF threshold.  
 
