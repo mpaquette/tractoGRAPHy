@@ -31,20 +31,6 @@ def build_assign_mat(vertices, cube_size=3):
 
     return assign_mat, vec
 
-# vertices = np.random.randn(1000000, 3)
-# assign_mat, vec = build_assign_mat(vertices, cube_size=3)
-
-# # for i in range(vec.shape[0]):
-# #     print(vec[i], '{:.2f} % of points'.format(100*assign_mat[:,i].sum()/assign_mat.shape[0]))
-
-# dist = np.unique(np.abs(vec).sum(axis=1))
-# prop = []
-# for d in dist:
-#   prop.append(assign_mat[:, np.abs(vec).sum(axis=1)==d].sum() / (np.abs(vec).sum(axis=1)==d).sum() / assign_mat.shape[0])
-#   print(d, '{:.2f} %'.format(100*prop[-1]))
-
-
-
 
 def build_assign_mat_cone(vertices, angle_thr, cube_size=3):
     # Build a matrix assigning each vertices
@@ -124,6 +110,7 @@ def mask2vertex(mask, vox2vertex):
     _vertex = [vox2vertex[xyz] for xyz in _xyz]
     return _vertex
 
+
 def mask2vertex_cone(mask, vox2vertex):
     # return the graph vertex of all voxels in a mask
     _vox = np.array(np.where(mask))
@@ -143,6 +130,7 @@ def mask_COM(mask):
 
 
 def compute_shortest_paths_COM2COM(g, COMs, w='neg_log'):
+    # compute shortest paths between all pairs of center-of-mass voxel
 
     # compute graph weight of shortest path
     path_weights = g.shortest_paths(source=COMs, 
@@ -170,47 +158,6 @@ def compute_shortest_paths_COM2COM(g, COMs, w='neg_log'):
 
     return paths, paths_length, path_weights
 
-
-
-# def save_COM2COM_path_as_streamlines(paths, vertex2vox, ref_img, fname):
-
-#     # loop into paths of vertex to create list of array of voxel
-#     streamlines = []
-#     for i_source in range(len(paths)):
-#         for i_dest in range(len(paths[i_source])):
-#             p = paths[i_source][i_dest]
-#             if len(p) > 1:
-#                 streamlines.append(np.array([vertex2vox[v] for v in p]))
-
-
-#     tgm = StatefulTractogram(
-#                         streamlines=streamlines,
-#                         reference=ref_img,
-#                         space=Space.VOX,
-#                         origin=Origin.NIFTI)
-
-#     save_tck(tgm, fname, bbox_valid_check=False)
-
-
-# def save_COM2COM_path_as_streamlines_cone(paths, vertex2vox, ref_img, fname):
-
-#     # loop into paths of vertex to create list of array of voxel
-#     streamlines = []
-#     for i_source in range(len(paths)):
-#         for i_dest in range(len(paths[i_source])):
-#             p = paths[i_source][i_dest]
-#             if len(p) > 1:
-#                 # ignore endpoints COM_i nodes
-#                 # ignore i_inc index for strealine
-#                 streamlines.append(np.array([vertex2vox[v] for v in p[1:-1]])[:,:3])
-
-#     tgm = StatefulTractogram(
-#                         streamlines=streamlines,
-#                         reference=ref_img,
-#                         space=Space.VOX,
-#                         origin=Origin.NIFTI)
-
-#     save_tck(tgm, fname, bbox_valid_check=False)
 
 def save_COM2COM_path_as_streamlines(paths, vertex2vox, ref_img, fname, exclude_endpoints=False):
 
@@ -291,90 +238,4 @@ def compute_shortest_paths_1COM2ALL(g, COM, rois_vertex, w='neg_log'):
         paths_length.append([len(s) for s in path])
 
     return paths, paths_length
-
-
-# # works but its a memory buster, need to a function saving for each source
-# def compute_shortest_paths_COM2ALL(g, COMs, rois_vertex, w='neg_log'):
-
-#     all_dest = [vert for roi_vertex in rois_vertex for vert in roi_vertex]
-#     all_count = [len(roi_vertex) for roi_vertex in rois_vertex]
-
-#     # compute graph weight of shortest path
-#     path_weights_grouped = g.shortest_paths(source=COMs, 
-#                                             target=all_dest, 
-#                                             weights=w, 
-#                                             mode='out')
-
-#     # degroup
-#     path_weights = []
-#     for i_source in range(len(path_weights_grouped)):
-#         tmp_source = []
-#         for i_dest in range(len(all_count)):
-#             a = int(np.sum(all_count[:i_dest]))
-#             b = int(np.sum(all_count[:i_dest])+all_count[i_dest])
-#             tmp_source.append(path_weights_grouped[i_source][a:b])
-#         path_weights.append(tmp_source)
-
-
-
-#     # compute the graph shortest path
-#     paths_grouped = [] 
-#     for i_source in range(len(COMs)):
-#         source = COMs[i_source]
-
-#         path = g.get_shortest_paths(source, 
-#                                     to=all_dest, 
-#                                     weights=w, 
-#                                     mode='out', 
-#                                     output='vpath')
-#         paths_grouped.append(path)
-
-#     # degroup
-#     paths = []
-#     for i_source in range(len(paths_grouped)):
-#         tmp_source = []
-#         for i_dest in range(len(all_count)):
-#             a = int(np.sum(all_count[:i_dest]))
-#             b = int(np.sum(all_count[:i_dest])+all_count[i_dest])
-#             tmp_source.append(paths_grouped[i_source][a:b])
-#         paths.append(tmp_source)
-
-
-
-#     # compute the lenght in term of vertex of the shortest path
-#     paths_length = []
-#     for i_source in range(len(COMs)):
-#         tmp_source = []
-#         for i_dest in range(len(all_count)):
-#             path = paths[i_source][i_dest]
-#             tmp_source.append([len(s) for s in path])
-#         paths_length.append(tmp_source)
-
-#     return paths, paths_length, path_weights
-
-# TODO
-# def save_COM2ALL_path_as_streamlines(paths, vertex2vox, ref_img, fname):
-
-#     # loop into paths of vertex to create list of array of voxel
-#     streamlines = []
-#     for i_source in range(len(paths)):
-#         for i_dest in range(len(paths[i_source])):
-#             streamlines.append(np.array([vertex2vox[v] for v in paths[i_source][i_dest]]))
-
-
-#     tgm = StatefulTractogram(
-#                         streamlines=streamlines,
-#                         reference=ref_img,
-#                         space=Space.VOX,
-#                         origin=Origin.NIFTI)
-
-#     save_tck(tgm, fname, bbox_valid_check=False)
-
-
-
-
-
-
-
-
 

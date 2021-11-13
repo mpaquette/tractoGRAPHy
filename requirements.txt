@@ -1,0 +1,6 @@
+numpy
+nibabel
+dipy
+scipy
+igraph
+argparse
