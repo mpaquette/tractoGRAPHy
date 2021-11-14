@@ -97,7 +97,7 @@ def main():
 
 
     # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
-    merge_w = 10000 # remove twice from computed path weight
+    merge_w = 0 # remove twice from computed path weight
 
 
     if args.target == 'COM':
@@ -108,6 +108,7 @@ def main():
         g.add_vertices(['COM_{}_source'.format(i) for i in range(1, label_map.max()+1)])
         g.add_vertices(['COM_{}_target'.format(i) for i in range(1, label_map.max()+1)])
 
+        source_vertex = []
         target_vertex = []
         edges_to_add = []
         for i in range(1, label_map.max()+1):
@@ -120,7 +121,7 @@ def main():
             # add new vertex to converge them all there
             new_vert_id_source = g.vs['name'].index('COM_{}_source'.format(i))
             new_vert_id_target = g.vs['name'].index('COM_{}_target'.format(i))
-            target_vertex.append(new_vert_id_source)
+            source_vertex.append(new_vert_id_source)
             target_vertex.append(new_vert_id_target)
             # create IN and OUT edge for all node at COM
             edges_to_add += [(new_vert_id_source, i_vert) for i_vert in COM_vertex]
@@ -132,7 +133,7 @@ def main():
         g.add_edges(edges_to_add, 
                     {'neg_log':[0]*len(edges_to_add)})
 
-        print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
+        print('Temporarily added {:} nodes to graph'.format(len(source_vertex)+len(target_vertex)))
         print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
 
 
@@ -145,27 +146,31 @@ def main():
         start_time = time()
         # compute center-of-mass -ish voxel for each roi
         # add nodes
-        g.add_vertices(['ROI_{}'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['ROI_{}_source'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['ROI_{}_target'.format(i) for i in range(1, label_map.max()+1)])
 
+        source_vertex = []
         target_vertex = []
         edges_to_add = []
         for i in range(1, label_map.max()+1):
             ROI_vertex = rois_vertex[i-1]
             # add new vertex to converge them all there
-            new_vert_id = g.vs['name'].index('ROI_{}'.format(i))
-            target_vertex.append(new_vert_id)
+            new_vert_id_source = g.vs['name'].index('ROI_{}_source'.format(i))
+            new_vert_id_target = g.vs['name'].index('ROI_{}_target'.format(i))
+            source_vertex.append(new_vert_id_source)
+            target_vertex.append(new_vert_id_target)
             # create IN and OUT edge for all node at COM
-            edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex]
-            edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex]
+            edges_to_add += [(new_vert_id_source, i_vert) for i_vert in ROI_vertex]
+            edges_to_add += [(i_vert, new_vert_id_target) for i_vert in ROI_vertex]
 
         # edge of zero could give loops
         # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
-                    {'neg_log':[merge_w]*len(edges_to_add)})
+                    {'neg_log':[0]*len(edges_to_add)})
         end_time = time()
 
         print('Making ROI-nodes = {:.2f} s'.format(end_time - start_time))
-        print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
+        print('Temporarily added {:} nodes to graph'.format(len(source_vertex)+len(target_vertex)))
         print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
 
 
@@ -173,6 +178,7 @@ def main():
     print('Computing shortest paths')
     start_time = time()
     paths, paths_length, weights = compute_shortest_paths_COM2COM(g,
+                                                                  source_vertex,
                                                                   target_vertex,
                                                                   w='neg_log')
 

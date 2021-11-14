@@ -129,22 +129,22 @@ def mask_COM(mask):
 
 
 
-def compute_shortest_paths_COM2COM(g, COMs, w='neg_log'):
+def compute_shortest_paths_COM2COM(g, source_COMs, target_COMs, w='neg_log'):
     # compute shortest paths between all pairs of center-of-mass voxel
 
     # compute graph weight of shortest path
-    path_weights = g.shortest_paths(source=COMs, 
-                                    target=COMs, 
+    path_weights = g.shortest_paths(source=source_COMs, 
+                                    target=target_COMs, 
                                     weights=w, 
                                     mode='out')
 
     # compute the graph shortest path
     paths = [] # paths[i_source][i_dest]
-    for i_source in range(len(COMs)):
-        source = COMs[i_source]
+    for i_source in range(len(source_COMs)):
+        source = source_COMs[i_source]
 
         path = g.get_shortest_paths(source, 
-                                    to=COMs, 
+                                    to=target_COMs, 
                                     weights=w, 
                                     mode='out', 
                                     output='vpath')
@@ -152,7 +152,7 @@ def compute_shortest_paths_COM2COM(g, COMs, w='neg_log'):
 
     # compute the lenght in term of vertex of the shortest path
     paths_length = []
-    for i_source in range(len(COMs)):
+    for i_source in range(len(source_COMs)):
         path = paths[i_source]
         paths_length.append([len(s) for s in path])
 
