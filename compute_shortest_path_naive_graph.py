@@ -95,11 +95,6 @@ def main():
         if (label_map==i).sum() == 0:
             print('Label map has no voxel inside mask for label = {:}'.format(i))
 
-
-    # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
-    merge_w = 0 # remove twice from computed path weight
-
-
     if args.target == 'COM':
         print('Using Center-of-Mass nodes as sources/targets')
 
@@ -127,9 +122,6 @@ def main():
             edges_to_add += [(new_vert_id_source, i_vert) for i_vert in COM_vertex]
             edges_to_add += [(i_vert, new_vert_id_target) for i_vert in COM_vertex]
 
-        # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
-        # edge of zero could give loops
-        # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
                     {'neg_log':[0]*len(edges_to_add)})
 
@@ -163,8 +155,6 @@ def main():
             edges_to_add += [(new_vert_id_source, i_vert) for i_vert in ROI_vertex]
             edges_to_add += [(i_vert, new_vert_id_target) for i_vert in ROI_vertex]
 
-        # edge of zero could give loops
-        # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
                     {'neg_log':[0]*len(edges_to_add)})
         end_time = time()
@@ -188,8 +178,8 @@ def main():
 
     ## correct values
     matrix_weight = np.array(weights)
-    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
-    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
+    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)]
+    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)]
 
     matrix_length = np.array(paths_length)
     matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2

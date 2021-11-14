@@ -96,17 +96,15 @@ def main():
             print('Label map has no voxel inside mask for label = {:}'.format(i))
 
 
-
-    merge_w = 10000 # remove twice from computed path weight
-
-
     if args.target == 'COM':
         print('Using Center-of-Mass as sources/targets')
 
         # compute center-of-mass -ish voxel for each roi
         # add nodes
-        g.add_vertices(['COM_{}'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['COM_{}_source'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['COM_{}_target'.format(i) for i in range(1, label_map.max()+1)])
 
+        source_vertex = []
         target_vertex = []
         edges_to_add = []
         for i in range(1, label_map.max()+1):
@@ -117,19 +115,18 @@ def main():
             # get vertex id of all 26 node at that vox
             COM_vertex_cone = [vox2vertex[COM+(i_inc,)] for i_inc in range(26)]
             # add new vertex to converge them all there
-            new_vert_id = g.vs['name'].index('COM_{}'.format(i))
-            target_vertex.append(new_vert_id)
+            new_vert_id_source = g.vs['name'].index('COM_{}_source'.format(i))
+            new_vert_id_target = g.vs['name'].index('COM_{}_target'.format(i))
+            source_vertex.append(new_vert_id_source)
+            target_vertex.append(new_vert_id_target)
             # create IN and OUT edge for all node at COM
-            edges_to_add += [(new_vert_id, i_vert) for i_vert in COM_vertex_cone]
-            edges_to_add += [(i_vert, new_vert_id) for i_vert in COM_vertex_cone]
+            edges_to_add += [(new_vert_id_source, i_vert) for i_vert in COM_vertex_cone]
+            edges_to_add += [(i_vert, new_vert_id_target) for i_vert in COM_vertex_cone]
 
-        # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
-        # edge of zero could give loops
-        # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
-                    {'neg_log':[merge_w]*len(edges_to_add)})
+                    {'neg_log':[0]*len(edges_to_add)})
 
-        print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
+        print('Temporarily added {:} nodes to graph'.format(len(source_vertex)+len(target_vertex)))
         print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
 
 
@@ -141,25 +138,29 @@ def main():
         start_time = time()
         # compute center-of-mass -ish voxel for each roi
         # add nodes
-        g.add_vertices(['ROI_{}'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['ROI_{}_source'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['ROI_{}_target'.format(i) for i in range(1, label_map.max()+1)])
 
+        source_vertex = []
         target_vertex = []
         edges_to_add = []
         for i in range(1, label_map.max()+1):
             ROI_vertex_cone = [vert for voxvert in rois_vertex_cone[i-1] for vert in voxvert]
             # add new vertex to converge them all there
-            new_vert_id = g.vs['name'].index('ROI_{}'.format(i))
-            target_vertex.append(new_vert_id)
+            new_vert_id_source = g.vs['name'].index('ROI_{}_source'.format(i))
+            new_vert_id_target = g.vs['name'].index('ROI_{}_target'.format(i))
+            source_vertex.append(new_vert_id_source)
+            target_vertex.append(new_vert_id_target)
             # create IN and OUT edge for all node at COM
-            edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex_cone]
-            edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex_cone]
+            edges_to_add += [(new_vert_id_source, i_vert) for i_vert in ROI_vertex_cone]
+            edges_to_add += [(i_vert, new_vert_id_target) for i_vert in ROI_vertex_cone]
 
 
         # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
         # edge of zero could give loops
         # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
-                    {'neg_log':[merge_w]*len(edges_to_add)})
+                    {'neg_log':[0]*len(edges_to_add)})
         end_time = time()
         print('Making ROI-node = {:.2f} s'.format(end_time - start_time))
         print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
@@ -171,6 +172,7 @@ def main():
     print('Computing shortest paths')
     start_time = time()
     paths, paths_length, weights = compute_shortest_paths_COM2COM(g,
+                                                                  source_vertex,
                                                                   target_vertex,
                                                                   w='neg_log')
 
@@ -180,8 +182,8 @@ def main():
 
     ## correct values
     matrix_weight = np.array(weights)
-    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
-    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
+    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)]
+    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)]
 
     matrix_length = np.array(paths_length)
     matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
