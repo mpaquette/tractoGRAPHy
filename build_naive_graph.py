@@ -74,12 +74,16 @@ def main():
     g = ig.Graph(directed=True)
     # add a vertex for each voxel in mask
     N = mask.sum()
+
+    # add out-of-mask special node
+    g.add_vertex(name='out-of-mask')
+
     g.add_vertices(N)
 
     # attribute a voxel to vertex
     vox2vertex = {}
     vertex2vox = {}
-    i = 0
+    i = 1
     for xyz in np.ndindex(prob.shape[:3]):
         if mask[xyz]:
             vox2vertex[xyz] = i
@@ -88,8 +92,11 @@ def main():
             i += 1
 
 
+
     print('Begin building naive graph.')
     start_time = time()
+
+    out_of_mask_vertex = g.vs['name'].index('out-of-mask')
 
     edges_to_add_all = []
     new_prob_all = []
@@ -104,8 +111,16 @@ def main():
             neigh_idx = vec + xyz
             neigh_mask = np.logical_and(mask[(neigh_idx[:,0], neigh_idx[:,1], neigh_idx[:,2])], prob[xyz] > 0)
             
-            new_prob = prob[xyz][neigh_mask] / prob[xyz][neigh_mask].sum()
+            # in-mask probabilities
+            new_prob = prob[xyz][neigh_mask] / prob[xyz].sum()
             new_prob_all += new_prob.tolist()
+
+            # out-of-mask probabilities
+            if np.any(~neigh_mask):
+                out_of_mask_prob = prob[xyz][~neigh_mask].sum() / prob[xyz].sum()
+                if out_of_mask_prob > 0:
+                    new_prob_all += [out_of_mask_prob]
+                    edges_to_add_all += [(current_vertex, out_of_mask_vertex)]
 
             neg_log_prob = -np.log(new_prob)
             neg_log_prob_all += neg_log_prob.tolist()
@@ -115,7 +130,7 @@ def main():
 
 
     g.add_edges(edges_to_add_all, 
-                {'prob':new_prob_all, 'neg_log':neg_log_prob_all})
+                {'neg_log':neg_log_prob_all})
 
 
     end_time = time()
