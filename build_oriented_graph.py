@@ -74,8 +74,12 @@ def main():
 
 
 
-    print('Begin building naive graph.')
+    print('Begin building oriented graph.')
     g = ig.Graph(directed=True)
+
+    # add out-of-mask special node
+    g.add_vertex(name='out-of-mask')
+
     # add a vertex for each voxel in mask
     N = mask.sum()*vec.shape[0]
     g.add_vertices(N)
@@ -83,7 +87,7 @@ def main():
     # attribute a voxel to vertex
     vox2vertex = {}
     vertex2vox = {}
-    i = 0
+    i = 1 # 0 is out-of-mask
     for xyz in np.ndindex(prob.shape[:3]):
         if mask[xyz]:
             for i_inc in range(vec.shape[0]):
@@ -95,6 +99,8 @@ def main():
 
 
     start_time = time()
+
+    out_of_mask_vertex = g.vs['name'].index('out-of-mask')
 
     edges_to_add_all = []
     # new_prob_all = [] # never used it
@@ -109,10 +115,22 @@ def main():
                 # idx of neighboor
                 neigh_idx = vec + xyz
                 neigh_mask = np.logical_and(mask[(neigh_idx[:,0], neigh_idx[:,1], neigh_idx[:,2])], prob[xyz][:, i_inc] > 0)
+                neigh_out_of_mask = np.logical_and(~mask[(neigh_idx[:,0], neigh_idx[:,1], neigh_idx[:,2])], prob[xyz][:, i_inc] > 0)
                 neigh_mask_nonzero = np.where(neigh_mask)[0]
+                neigh_out_of_mask_nonzero = np.where(neigh_out_of_mask)[0]
 
-                new_prob = prob[xyz][:, i_inc][neigh_mask] / prob[xyz][:, i_inc][neigh_mask].sum()
+
+
+                tmp_prob_norm = (prob[xyz][:, i_inc][neigh_mask].sum()+prob[xyz][:, i_inc][neigh_out_of_mask_nonzero].sum())
+                new_prob = prob[xyz][:, i_inc][neigh_mask] / tmp_prob_norm 
                 # new_prob_all += new_prob.tolist() # never used it
+
+                # out-of-mask probabilities
+                if np.any(neigh_out_of_mask_nonzero):
+                    out_of_mask_prob = prob[xyz][:, i_inc][neigh_out_of_mask_nonzero].sum() / tmp_prob_norm
+                    neg_log_prob_all += [-np.log(out_of_mask_prob)]
+                    edges_to_add_all += [(current_vertex, out_of_mask_vertex)]
+
 
                 neg_log_prob = -np.log(new_prob)
                 neg_log_prob_all += neg_log_prob.tolist()

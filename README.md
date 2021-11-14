@@ -71,6 +71,10 @@ compute_shortest_path_oriented_graph.py
 Compute shortest paths and connectivity matrices for oriented graph.  
 Needs a oriented graph, a mask, a label map and a target_type.  
 
+```
+inspect_graph.py  
+```
+Give information on the graph type.   
 
 
 Test data created from [Fiberfox replications of the FiberCup datasets](https://www.nitrc.org/frs/?group_id=627)  

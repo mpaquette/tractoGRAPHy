@@ -72,18 +72,18 @@ def main():
 
 
     g = ig.Graph(directed=True)
-    # add a vertex for each voxel in mask
-    N = mask.sum()
 
     # add out-of-mask special node
     g.add_vertex(name='out-of-mask')
 
+    # add a vertex for each voxel in mask
+    N = mask.sum()
     g.add_vertices(N)
 
     # attribute a voxel to vertex
     vox2vertex = {}
     vertex2vox = {}
-    i = 1
+    i = 1 # 0 is out-of-mask
     for xyz in np.ndindex(prob.shape[:3]):
         if mask[xyz]:
             vox2vertex[xyz] = i
@@ -99,7 +99,7 @@ def main():
     out_of_mask_vertex = g.vs['name'].index('out-of-mask')
 
     edges_to_add_all = []
-    new_prob_all = []
+    # new_prob_all = []
     neg_log_prob_all = []
 
 
@@ -113,13 +113,13 @@ def main():
             
             # in-mask probabilities
             new_prob = prob[xyz][neigh_mask] / prob[xyz].sum()
-            new_prob_all += new_prob.tolist()
+            # new_prob_all += new_prob.tolist()
 
             # out-of-mask probabilities
             if np.any(~neigh_mask):
                 out_of_mask_prob = prob[xyz][~neigh_mask].sum() / prob[xyz].sum()
                 if out_of_mask_prob > 0:
-                    new_prob_all += [out_of_mask_prob]
+                    neg_log_prob_all += [-np.log(out_of_mask_prob)]
                     edges_to_add_all += [(current_vertex, out_of_mask_vertex)]
 
             neg_log_prob = -np.log(new_prob)
