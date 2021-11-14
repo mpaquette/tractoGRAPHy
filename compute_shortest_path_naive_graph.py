@@ -96,14 +96,44 @@ def main():
             print('Label map has no voxel inside mask for label = {:}'.format(i))
 
 
+    # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
+    merge_w = 10000 # remove twice from computed path weight
+
+
     if args.target == 'COM':
-        print('Using Center-of-Mass as sources/targets')
+        print('Using Center-of-Mass nodes as sources/targets')
 
         # compute center-of-mass -ish voxel for each roi
+        # add nodes for source and for target
+        g.add_vertices(['COM_{}_source'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['COM_{}_target'.format(i) for i in range(1, label_map.max()+1)])
+
         target_vertex = []
+        edges_to_add = []
         for i in range(1, label_map.max()+1):
+            # get roi
             roi_mask = (label_map==i)
-            target_vertex.append(vox2vertex[mask_COM(roi_mask)])
+            # get COM vox
+            COM = mask_COM(roi_mask)
+            # get vertex id of all 26 node at that vox
+            COM_vertex = [vox2vertex[mask_COM(roi_mask)]]
+            # add new vertex to converge them all there
+            new_vert_id_source = g.vs['name'].index('COM_{}_source'.format(i))
+            new_vert_id_target = g.vs['name'].index('COM_{}_target'.format(i))
+            target_vertex.append(new_vert_id_source)
+            target_vertex.append(new_vert_id_target)
+            # create IN and OUT edge for all node at COM
+            edges_to_add += [(new_vert_id_source, i_vert) for i_vert in COM_vertex]
+            edges_to_add += [(i_vert, new_vert_id_target) for i_vert in COM_vertex]
+
+        # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
+        # edge of zero could give loops
+        # instead we put very very expensive nodes, and we can remove it when counting
+        g.add_edges(edges_to_add, 
+                    {'neg_log':[0]*len(edges_to_add)})
+
+        print('Temporarily added {:} nodes to graph'.format(len(target_vertex)))
+        print('Temporarily added {:} edges to graph'.format(len(edges_to_add)))
 
 
     elif args.target == 'ROI':
@@ -128,9 +158,6 @@ def main():
             edges_to_add += [(new_vert_id, i_vert) for i_vert in ROI_vertex]
             edges_to_add += [(i_vert, new_vert_id) for i_vert in ROI_vertex]
 
-        # TODO replace the big weight hack with 2 ROI nodes, a source and a target with unidirectional free edges
-        merge_w = 10000 # remove twice from computed path weight
-
         # edge of zero could give loops
         # instead we put very very expensive nodes, and we can remove it when counting
         g.add_edges(edges_to_add, 
@@ -153,25 +180,17 @@ def main():
     print('Elapsed time = {:.2f} s'.format(end_time - start_time))
 
 
-    if args.target == 'COM':
-        # build matrices from shortest path
-        matrix_weight = np.array(weights)
-        matrix_length = np.array(paths_length)
-        matrix_prob = np.exp(-matrix_weight)
-        matrix_geom = np.exp(-matrix_weight / matrix_length)
+    ## correct values
+    matrix_weight = np.array(weights)
+    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
+    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
 
-    elif args.target == 'ROI':
-        ## correct values to account for big ROI edges
-        matrix_weight = np.array(weights)
-        matrix_weight[np.triu_indices(matrix_weight.shape[0],1)] -= 2*merge_w
-        matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)] -= 2*merge_w
+    matrix_length = np.array(paths_length)
+    matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
+    matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
 
-        matrix_length = np.array(paths_length)
-        matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
-        matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
-
-        matrix_prob = np.exp(-matrix_weight)
-        matrix_geom = np.exp(-matrix_weight / matrix_length)
+    matrix_prob = np.exp(-matrix_weight)
+    matrix_geom = np.exp(-matrix_weight / matrix_length)
 
 
     # save matrice
@@ -186,17 +205,11 @@ def main():
     if args.savepath is not None:
         print('Saving paths as tck')
         start_time = time()
-        if args.target == 'COM':
-            tmp_exclude_endpoints = False
-        elif args.target == 'ROI':
-            tmp_exclude_endpoints = True
-
         save_COM2COM_path_as_streamlines(paths, 
                                          vertex2vox, 
                                          ref_img=mask_img, 
                                          fname=args.savepath,
-                                         exclude_endpoints=tmp_exclude_endpoints)
-
+                                         exclude_endpoints=True)
 
         end_time = time()
         print('Elapsed time = {:.2f} s'.format(end_time - start_time))

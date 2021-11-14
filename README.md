@@ -81,11 +81,3 @@ Test data created from [Fiberfox replications of the FiberCup datasets](https://
 
 test_data/results included generated probability maps, graphs, connectomes and shortest paths for naive, oriented, for COM and for ROI.  
 
-
-TODO:  
-- Save neighboor point attribution during probability computation and load them during graph building  
-- Make shortest path script robust to unconnected ROI  
-
-
-
-
