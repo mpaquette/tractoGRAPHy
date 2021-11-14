@@ -1,10 +1,10 @@
+#!/usr/bin/env python3
+
 import argparse
 
 import numpy as np
 import nibabel as nib 
-
 from time import time
-
 import igraph as ig
 
 from utils import mask2vertex_cone, \

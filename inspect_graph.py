@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
+
 import argparse
 
 import numpy as np
-
 import igraph as ig
 
 from utils import load_graph
