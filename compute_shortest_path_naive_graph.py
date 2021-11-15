@@ -52,13 +52,15 @@ def buildArgsParser():
 
     p.add_argument('graph', type=str, default=[],
                    help='Path of the naive graph (pickled).')
-    p.add_argument('label', type=str, default=[],
-                   help='Path of the label map.')
+    p.add_argument('label_source', type=str, default=[],
+                   help='Path of the sources label map. Will be used for targets too if not specified.')
     p.add_argument('mask', type=str, default=[],
                    help='Path of the mask file.')
     p.add_argument('target', choices=('COM', 'ROI'))
     p.add_argument('output', type=str, default=[],
                    help='Base path of the output matrix.')
+    p.add_argument('--label_target', type=str, default='',
+                   help='Path of the target label map.')
     p.add_argument('--savepath', type=str, default=None,
                    help='Output the paths as tck file if file name is given.')
     return p
@@ -72,7 +74,13 @@ def main():
     args = parser.parse_args()
 
     graph_fname = args.graph
-    roipath = args.label
+
+    source_roipath = args.label_source
+    target_roipath = args.label_target
+    if len(target_roipath) == 0:
+        print('Using same labels for source and target')
+        target_roipath = source_roipath
+
     mask_fname = args.mask
     out_basefname = args.output
 
@@ -84,42 +92,76 @@ def main():
     affine = mask_img.affine
     mask = mask_img.get_fdata().astype(np.bool)
 
-    label_map = nib.load(roipath).get_fdata().astype(np.int)
-    print('Label map has {:} greater than zero voxel'.format((label_map>0).sum()))
-    tmp_label_max = np.max(label_map)
 
-    label_map[np.logical_not(mask)] = 0
-    print('Label map has {:} greater than zero voxel inside mask'.format((label_map>0).sum()))
 
-    for i in range(1, tmp_label_max+1):
-        if (label_map==i).sum() == 0:
-            print('Label map has no voxel inside mask for label = {:}'.format(i))
+    source_label_map = nib.load(source_roipath).get_fdata().astype(np.int)
+    print('Source label map has {:} greater than zero voxel'.format((source_label_map>0).sum()))
+    tmp_source_label_max = np.max(source_label_map)
+
+    source_label_map[np.logical_not(mask)] = 0
+    print('Source label map has {:} greater than zero voxel inside mask'.format((source_label_map>0).sum()))
+
+    for i in range(1, tmp_source_label_max+1):
+        if (source_label_map==i).sum() == 0:
+            print('Source label map has no voxel inside mask for label = {:}'.format(i))
+
+
+    if target_roipath == source_roipath:
+        target_label_map = source_label_map.copy()
+    else:
+        target_label_map = nib.load(target_roipath).get_fdata().astype(np.int)
+        print('Target label map has {:} greater than zero voxel'.format((target_label_map>0).sum()))
+        tmp_target_label_max = np.max(target_label_map)
+
+        target_label_map[np.logical_not(mask)] = 0
+        print('Target label map has {:} greater than zero voxel inside mask'.format((target_label_map>0).sum()))
+
+        for i in range(1, tmp_target_label_max+1):
+            if (target_label_map==i).sum() == 0:
+                print('Target label map has no voxel inside mask for label = {:}'.format(i))
+
+
+
+
+
 
     if args.target == 'COM':
         print('Using Center-of-Mass nodes as sources/targets')
 
         # compute center-of-mass -ish voxel for each roi
         # add nodes for source and for target
-        g.add_vertices(['COM_{}_source'.format(i) for i in range(1, label_map.max()+1)])
-        g.add_vertices(['COM_{}_target'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['COM_{}_source'.format(i) for i in range(1, source_label_map.max()+1)])
+        g.add_vertices(['COM_{}_target'.format(i) for i in range(1, target_label_map.max()+1)])
+
+        edges_to_add = []
 
         source_vertex = []
-        target_vertex = []
-        edges_to_add = []
-        for i in range(1, label_map.max()+1):
+        for i in range(1, source_label_map.max()+1):
             # get roi
-            roi_mask = (label_map==i)
+            roi_mask = (source_label_map==i)
             # get COM vox
             COM = mask_COM(roi_mask)
             # get vertex id of all 26 node at that vox
             COM_vertex = [vox2vertex[mask_COM(roi_mask)]]
             # add new vertex to converge them all there
             new_vert_id_source = g.vs['name'].index('COM_{}_source'.format(i))
-            new_vert_id_target = g.vs['name'].index('COM_{}_target'.format(i))
             source_vertex.append(new_vert_id_source)
-            target_vertex.append(new_vert_id_target)
-            # create IN and OUT edge for all node at COM
+            # create OUT edge for all node at COM
             edges_to_add += [(new_vert_id_source, i_vert) for i_vert in COM_vertex]
+
+        target_vertex = []
+        for i in range(1, target_label_map.max()+1):
+            # get roi
+            roi_mask = (target_label_map==i)
+            # get COM vox
+            COM = mask_COM(roi_mask)
+            # get vertex id of all 26 node at that vox
+            COM_vertex = [vox2vertex[mask_COM(roi_mask)]]
+            # add new vertex to converge them all there
+            new_vert_id_target = g.vs['name'].index('COM_{}_target'.format(i))
+            # source_vertex.append(new_vert_id_source)
+            target_vertex.append(new_vert_id_target)
+            # create IN edge for all node at COM
             edges_to_add += [(i_vert, new_vert_id_target) for i_vert in COM_vertex]
 
         g.add_edges(edges_to_add, 
@@ -132,27 +174,38 @@ def main():
     elif args.target == 'ROI':
         print('Using ROI nodes as sources/targets')
 
-        rois_vertex = [mask2vertex(label_map==i, vox2vertex) for i in range(1, label_map.max()+1)]
+        source_rois_vertex = [mask2vertex(source_label_map==i, vox2vertex) for i in range(1, source_label_map.max()+1)]
 
+        if target_roipath == source_roipath:
+            target_rois_vertex = source_rois_vertex
+        else:
+            target_rois_vertex = [mask2vertex(target_label_map==i, vox2vertex) for i in range(1, target_label_map.max()+1)]
 
         start_time = time()
         # compute center-of-mass -ish voxel for each roi
         # add nodes
-        g.add_vertices(['ROI_{}_source'.format(i) for i in range(1, label_map.max()+1)])
-        g.add_vertices(['ROI_{}_target'.format(i) for i in range(1, label_map.max()+1)])
+        g.add_vertices(['ROI_{}_source'.format(i) for i in range(1, source_label_map.max()+1)])
+        g.add_vertices(['ROI_{}_target'.format(i) for i in range(1, target_label_map.max()+1)])
+
+
+        edges_to_add = []
 
         source_vertex = []
-        target_vertex = []
-        edges_to_add = []
-        for i in range(1, label_map.max()+1):
-            ROI_vertex = rois_vertex[i-1]
+        for i in range(1, source_label_map.max()+1):
+            ROI_vertex = source_rois_vertex[i-1]
             # add new vertex to converge them all there
             new_vert_id_source = g.vs['name'].index('ROI_{}_source'.format(i))
-            new_vert_id_target = g.vs['name'].index('ROI_{}_target'.format(i))
             source_vertex.append(new_vert_id_source)
-            target_vertex.append(new_vert_id_target)
-            # create IN and OUT edge for all node at COM
+            # create IN edge for all node at ROI
             edges_to_add += [(new_vert_id_source, i_vert) for i_vert in ROI_vertex]
+
+        target_vertex = []
+        for i in range(1, target_label_map.max()+1):
+            ROI_vertex = target_rois_vertex[i-1]
+            # add new vertex to converge them all there
+            new_vert_id_target = g.vs['name'].index('ROI_{}_target'.format(i))
+            target_vertex.append(new_vert_id_target)
+            # create OUT edge for all node at ROI
             edges_to_add += [(i_vert, new_vert_id_target) for i_vert in ROI_vertex]
 
         g.add_edges(edges_to_add, 
@@ -178,13 +231,7 @@ def main():
 
     ## correct values
     matrix_weight = np.array(weights)
-    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)]
-    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)]
-
-    matrix_length = np.array(paths_length)
-    matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
-    matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
-
+    matrix_length = np.array(paths_length) - 2
     matrix_prob = np.exp(-matrix_weight)
     matrix_geom = np.exp(-matrix_weight / matrix_length)
 

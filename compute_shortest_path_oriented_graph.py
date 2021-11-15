@@ -182,13 +182,7 @@ def main():
 
     ## correct values
     matrix_weight = np.array(weights)
-    matrix_weight[np.triu_indices(matrix_weight.shape[0],1)]
-    matrix_weight[np.tril_indices(matrix_weight.shape[0],-1)]
-
-    matrix_length = np.array(paths_length)
-    matrix_length[np.triu_indices(matrix_weight.shape[0],1)] -= 2
-    matrix_length[np.tril_indices(matrix_weight.shape[0],-1)] -= 2
-
+    matrix_length = np.array(paths_length) - 2
     matrix_prob = np.exp(-matrix_weight)
     matrix_geom = np.exp(-matrix_weight / matrix_length)
 
