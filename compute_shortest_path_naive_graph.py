@@ -235,6 +235,13 @@ def main():
     matrix_prob = np.exp(-matrix_weight)
     matrix_geom = np.exp(-matrix_weight / matrix_length)
 
+    # fix for missing connection
+    # weight are correctly set to inf
+    # length was correctly set 0 so it -2 now
+    # prob is correctly set to 0 (exp(-inf))
+    # geom incorectly set to inf because of the division by negative length
+    matrix_geom[np.where(matrix_length == -2)] = np.inf
+    matrix_length[np.where(matrix_length == -2)] = 0
 
     # save matrice
     print('Saving matrices as {:}_(w,l,prob,geom).npy'.format(out_basefname))
