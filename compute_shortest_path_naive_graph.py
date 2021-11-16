@@ -18,7 +18,8 @@ DESCRIPTION = """
 Compute shortest paths and connectivity matrices for naive graph.
 Needs a naive graph, a mask, a label map and a target_type.
 
-The label map is expected to have integer value above 0 for each source/target.
+The label map is expected to have integer value above 0 for each source.
+If flag label_target isn't used, we use same label map as target as the sources.
 We intersect the label map with the mask and discard what's outside.
 
 For target_type 'COM', we compute the center-of-mass of each label (what remains after the intersection) and we find the closest voxel inside the mask to that center-of-mass.
@@ -77,7 +78,7 @@ def main():
 
     source_roipath = args.label_source
     target_roipath = args.label_target
-    if len(target_roipath) == 0:
+    if len(target_roipath) == 0: # not set
         print('Using same labels for source and target')
         target_roipath = source_roipath
 
@@ -91,7 +92,6 @@ def main():
     mask_img = nib.load(mask_fname)
     affine = mask_img.affine
     mask = mask_img.get_fdata().astype(np.bool)
-
 
 
     source_label_map = nib.load(source_roipath).get_fdata().astype(np.int)
