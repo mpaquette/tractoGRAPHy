@@ -16,24 +16,27 @@ from utils import mask2vertex, \
 
 DESCRIPTION = """
 Compute shortest paths and connectivity matrices for naive graph.
-Needs a naive graph, a mask, a label map and a target_type.
+Needs a naive graph, a mask, a label map and a label_type.
 
-The label map is expected to have integer value above 0 for each source.
-If flag label_target isn't used, we use same label map as target as the sources.
-We intersect the label map with the mask and discard what's outside.
+The label map is expected to have integer values above 0 for each source.
+If flag label_target isn't used, we use same label map for targets.
+We intersect the label map with the mask and discard what is outside.
 
-For target_type 'COM', we compute the center-of-mass of each label (what remains after the intersection) and we find the closest voxel inside the mask to that center-of-mass.
-The shortest paths are computed for all pairs of COM voxels only.
+For label_type 'COM', we compute the center-of-mass of each label (what remains after the intersection) and we find the closest voxel inside the mask to that center-of-mass.
+The shortest paths are computed for pairs of COM voxels only.
 
-For target_type 'ROI', we create new nodes for each label and attach them to every voxel of that label.
+For label_type 'ROI', we create new nodes for each label and attach them to every voxel of that label.
 The shortest paths are computed between these ROI-nodes. 
-This is equivalent to computing the shortest path between every pair of voxels of 2 ROIs and picking the shortest of the shortest.
+This is equivalent to computing the shortest path between every pair of voxels between two ROIs and picking the minimum of the shortest paths.
 
 Using the provided basename, we save 4 matrix: 
     - "w" with the graph weights (-ln(probability)).
     - "l" with the path lengths in number of nodes.
     - "prob" with the path probability.
     - "geom" with the geometric mean of the steps probabilities along the paths
+
+Unconnected regions have infinite weight and geometric mean, and zero probability and lenght
+These is a RuntimeWarning if any source/target pair are unconnected.
 
 If the savepath flag is enabled, we save all the shortest paths as streamlines defined by the voel coordinates.
 """
@@ -57,11 +60,12 @@ def buildArgsParser():
                    help='Path of the sources label map. Will be used for targets too if not specified.')
     p.add_argument('mask', type=str, default=[],
                    help='Path of the mask file.')
-    p.add_argument('target', choices=('COM', 'ROI'))
+    p.add_argument('target', choices=('COM', 'ROI'),
+                   help='Define how to treat the labels.')
     p.add_argument('output', type=str, default=[],
                    help='Base path of the output matrix.')
     p.add_argument('--label_target', type=str, default='',
-                   help='Path of the target label map.')
+                   help='Path of the target label map. Will use label_source if unset.')
     p.add_argument('--savepath', type=str, default=None,
                    help='Output the paths as tck file if file name is given.')
     return p
